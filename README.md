@@ -1,84 +1,127 @@
-# Mihomo (Clash Meta) 精细化白名单路由配置模板
+# Mihomo (Clash Meta) 实用分流配置模板
 
-这是一个专为 Mihomo (Clash Meta) 设计的高阶配置文件集合。包含了分别针对桌面端 (Desktop)、Android、iOS 客户端以及 Docker 代理容器的专属**配置模板**。本仓库的设计初衷是提供一套**极度干净、可控且智能**的网络分流体系。
+创建这个仓库的初衷非常简单：在日常折腾网络的过程中，我厌倦了以下痛点：
+1. **不想依赖特定机场的分流规则**：很多机场自带的规则极其臃肿或常年失修。
+2. **不想换机场就换规则**：每次更换服务商，都要重新习惯一套新的路由逻辑，成本太高。
+3. **多机场混合使用困难**：市面上极少有开箱即用的、能完美将多个机场节点混合测速并智能调度的配置。
+4. **想要一套简洁且合理的策略**：通过不断地实践与摸索，总结出了一套在实际体验中稳定、高效的代理组策略。
 
-## 设计思路：白名单模式与强制兜底
-
-本配置模板的核心哲学是 **“白名单模式 (White-list)”**：
-1. **预设明确直连：** 局域网、国内 IP (基于 GeoIP)、国内域名 (基于 GeoSite)、以及特殊应用直连。
-2. **预设明确拦截：** 针对特定的广告、隐私追踪（基于 Reject 规则集），以及特殊的抗干扰需求（如拦截 QUIC 以避免浏览器 UDP 穿透直连）。
-3. **未匹配的统一走代理：** 在规则的最末尾设置 `- MATCH,PROXY` 作为兜底。只要不是明确直连的流量，全部送入代理。这避免了日常“漏网之鱼”导致的网络阻断，完美解决各类小众国外网站、冷门客户端无法连通的问题。
-
----
-
-## 一、致谢：远程规则集的来源
-
-本模板的智能分流高度依赖于开源社区维护的远程规则集（Rule Providers）。向以下项目的维护者表示诚挚的感谢：
-
-*   **[Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules)**：提供了绝大多数的基础路由规则，包括：
-    *   `reject.txt`: 广告与隐私追踪域名。
-    *   `icloud.txt`, `apple.txt`, `google.txt`: 科技巨头的直连与代理规则。
-    *   `proxy.txt`, `direct.txt`, `private.txt`: 常见的需代理域名、需直连域名及局域网域名。
-    *   `gfw.txt`, `tld-not-cn.txt`: 被墙域名及非中国大陆顶级域名。
-    *   `telegramcidr.txt`: Telegram 专属 IP 段。
-    *   `cncidr.txt`, `lancidr.txt`: 中国大陆及局域网 IP 段。
-    *   `applications.txt`: 经典应用程序特征。
-*   **[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**：
-    *   `Cloudflare.yaml`: 提供了 Cloudflare 的精准 IP 规则，用于解决 CDN 流量代理异常的问题。
+因此，这并不是什么庞大复杂的工程，而是我个人实践出的一套**“白名单模式 + 智能兜底”**的配置模板集合。
 
 ---
 
-## 二、为什么采用这些分流策略？
+## 一、配置适用设备概览
 
-不同的远程规则集在我们的模板中被分配了不同的策略（Action），这是基于实际网络体验的深度考量：
+在深入探讨区别之前，请先对号入座，这 4 份配置文件分别针对以下运行环境：
 
-*   **`RULE-SET,reject,REJECT`**：将已知的广告、追踪器、恶意域名直接丢弃。这样可以在代理客户端层面实现全设备（甚至全局域网，若是旁路由）的广告屏蔽，节省带宽。
-*   **`RULE-SET,cloudflare,cloudflare`（特殊 IP 规则）**：为什么我们需要专门匹配 Cloudflare 的 IP？因为许多网站使用 Cloudflare CDN，配合 HTTP/3 (QUIC) 时，传统的域名嗅探可能会失效，导致流量漏匹配而直连，最终无法访问。通过将其 IP 强制指向专属代理组，确保这些流量稳定穿越。
-*   **`GEOIP,CN,DIRECT` / `RULE-SET,cncidr,DIRECT`**：基于 IP 的国内直连。即使一个国内域名没有被收录在直连列表，只要解析出的 IP 在中国大陆境内，一律直连，保证国内应用的速度。
-*   **`AND,((NETWORK,UDP),(DST-PORT,443)),REJECT` (QUIC 拦截)**：这是强制兜底策略。浏览器遇到 UDP 443 阻断时，会自动无感降级到 TCP 443 进行 TLS 握手。这一举措彻底根除了因运营商 UDP 劣化或代理 UDP 穿透失败导致的视频缓冲、网页无限加载问题。
-
----
-
-## 三、为什么 Desktop 配置更复杂？
-
-您可能会发现，`mihomo_config_desktop_template.yaml` 相比移动端和 Docker 版本更加复杂。主要体现在代理组（Proxy Groups）的设计上：
-
-**Desktop 引入了 `AUTO_STRICT`、`AUTO_SPEED`、`AUTO_GENERAL` 这样的分层容灾策略。**
-
-*   **桌面端的网络环境往往更苛刻**：在办公或高强度查阅资料时，我们既需要**极低的延迟**（用于游戏、网页秒开），又需要**极高的稳定性**（不断线）。
-*   **多维度 fallback**：
-    *   `AUTO_STRICT` 组被设计为剔除那些容易断流的协议，只选用最稳健的节点。
-    *   `AUTO_SPEED` 则可能放宽协议限制，通过 `url-test` 选择绝对延迟最低的节点。
-*   **建议使用原则**：如果使用者（或 AI Agent）要调整 Desktop，建议将最核心的生产力流量（如 Google、GitHub）绑定到 `AUTO_STRICT`，将流媒体等大流量分配给 `AUTO_SPEED`，其余常规请求扔给 `AUTO_GENERAL`。
+*   💻 **`mihomo_config_desktop_template.yaml` (桌面版)**
+    *   **适用设备**：Windows / macOS / Linux 电脑。
+    *   **适用客户端**：Clash Verge Rev、Mihomo Party 等完整支持 Mihomo 内核特性的桌面客户端。
+*   🤖 **`mihomo_config_android_template.yaml` (安卓版)**
+    *   **适用设备**：Android 手机 / 平板。
+    *   **适用客户端**：Clash for Android (CFA)、Surfboard、FlClash 等。
+*   🍏 **`mihomo_config_ios_template.yaml` (iOS 版)**
+    *   **适用设备**：iPhone / iPad。
+    *   **适用客户端**：Shadowrocket (小火箭)、Stash、Quantumult X 等（支持 Clash 格式订阅的工具）。
+*   🐳 **`mihomo_config_docker_template.yaml` (Docker/NAS 版)**
+    *   **适用设备**：NAS (如群晖、极空间)、家庭服务器。
+    *   **运行模式说明**：明确一点，此配置**不开 TUN 模式，也不是传统意义上的旁路由网关**。它仅仅是通过 Docker 运行，并在局域网内暴露一个代理端口（如 `7890`）。局域网内的其他设备需要手动配置代理 IP 和端口来连入它。
 
 ---
 
-## 四、不同配置文件之间的差异与考量
+## 二、4 份配置文件的横向对比与核心差异
 
-除了 Desktop 之外，Android、iOS 和 Docker 的配置也有微妙的区别：
+为了适应不同平台的特性和客户端的性能限制，4 份配置在细节上有明确的区分考量：
 
-1.  **Docker 版 (旁路由/网关模式)**：
-    *   作为整个局域网的网关，通常不开启 TUN 模式，而是依赖内核路由或 iptables 转发。因此它的规则更倾向于大吞吐量和纯 IP 级别的稳健路由，不过多依赖本地设备的特定协议嗅探。
-2.  **Android / iOS (移动端)**：
-    *   移动端经常在蜂窝网络和 WiFi 之间切换，IP 会频繁变动。因此移动端配置强烈依赖 `sniffer`（嗅探器）。
-    *   配置中开启了极具针对性的 DNS 与 TLS 嗅探，以便在手机某些流氓 App 强行使用 DoH (DNS over HTTPS) 解析出裸 IP 发起连接时，Mihomo 能从流量中“扒出”真实域名，重新正确分流，防止隐私泄露。
-    *   代理组相对简单（直接使用 `AUTO_1`, `AUTO_2`），因为移动端算力和续航有限，不宜运行过多的并发测速 (url-test) 分组。
+| 特性 / 配置文件 | Desktop (桌面) | Android (安卓) | iOS (苹果) | Docker (NAS) |
+| :--- | :--- | :--- | :--- | :--- |
+| **TUN 虚拟网卡** | ✅ 开启 | ✅ 开启 | ✅ 开启 (客户端接管) | ❌ 关闭 (仅暴露端口) |
+| **Sniffer (流量嗅探)** | ✅ 开启 | ✅ 开启 | ✅ 开启 | ✅ 开启 |
+| **节点正则过滤 (`exclude-filter`)** | ✅ 支持 (精确剔除无用节点) | ✅ 支持 | ❌ **不支持** | ✅ 支持 |
+| **协议类型过滤 (`exclude-type`)** | ✅ 支持 (按需筛选协议) | ❌ 未使用 | ❌ **不支持** | ❌ 未使用 |
+| **私有内网 Hosts 解析** | ❌ 无需 | ❌ 无需 | ❌ 无需 | ✅ 配置了 `hosts:` (供局域网解析) |
+| **代理组策略复杂度** | 高 (`AUTO_STRICT`, `SPEED` 等) | 中 (`AUTO_1`, `AUTO_2`) | 低 (`AUTO_1`, `AUTO_2`) | 中 (`AUTO_1`, `AUTO_2`) |
+
+### 差异考量详解：
+1. **iOS 的技术妥协**：像 Shadowrocket 或 Stash 这样的 iOS 客户端，对 Mihomo 内核的高级语法（如正则表达式 `exclude-filter` 和协议剔除 `exclude-type`）支持非常不完善甚至会报错。因此在 iOS 模板中，我们移除了这些语法，保证最大的兼容性。
+2. **Desktop 的火力全开**：桌面端性能充裕且客户端支持完整。我们利用 `exclude-type` 剥离出稳定性要求极高的协议放进 `AUTO_STRICT`（如 Vless/Trojan），把追求速度的协议放进 `AUTO_SPEED`，实现精细化的分层调度。
+3. **Docker 的局域网定位**：既然它在内网做代理服务器，就需要解决内网域名的解析问题。因此只有它启用了 `hosts:` 字段映射（例如 `your-private-domain.com: 192.168.x.x`），并且关闭了破坏宿主机网络的 TUN。
 
 ---
 
-## 五、给 AI Agent (AI 智能体) 的食用指南
+## 三、流量路由逻辑图示 (Mermaid)
 
-如果你是一个 AI Agent（且具备代码/文件编辑能力，即 Skills），人类用户可能会要求你：“帮我把我的机场链接导入到这些配置中”。你可以遵循以下思路与人类互动：
+### 1. Desktop / Android / iOS (客户端模式路由图)
+客户端模式下，流量直接被 TUN 劫持。
+```mermaid
+graph TD
+    App[应用层流量] --> TUN[TUN 接口接管]
+    TUN --> QUIC{是否为 QUIC / UDP 443 ?}
+    QUIC -- 是 (拦截) --> RejectQuic[强制 REJECT <br> 促使浏览器降级 TCP]
+    QUIC -- 否 --> Sniff[Sniffer 嗅探真实域名]
+    Sniff --> Match{路由规则匹配}
+    
+    Match -- 广告追踪/恶意域名 --> ActionReject[REJECT 丢弃]
+    Match -- GeoIP CN / 常用国内域 --> ActionDirect[DIRECT 直连]
+    Match -- Cloudflare 等特殊 IP --> ActionProxy[强制送入代理组]
+    Match -- 兜底规则 (MATCH) --> ActionProxy
+    
+    ActionProxy --> Selector((代理组调度))
+    
+    Selector -. 桌面版高级调度 .-> Strict[AUTO_STRICT 稳健节点]
+    Selector -. 桌面版高级调度 .-> Speed[AUTO_SPEED 极速节点]
+    Selector -. 移动端常规调度 .-> Auto1[AUTO_1 主力机场]
+    Selector -. 移动端常规调度 .-> Auto2[AUTO_2 备用机场]
+```
 
-### 交互与执行流程
-1.  **主动询问订阅数量**：
+### 2. Docker (局域网代理模式路由图)
+Docker 版不接管底层网卡，只被动接收代理请求。
+```mermaid
+graph TD
+    LAN[局域网设备] -- 配置 HTTP/SOCKS 代理 --> Port[Docker 暴露端口 7890]
+    Port --> Hosts{是否命中 Hosts 映射?}
+    
+    Hosts -- 是 --> ReturnLAN[解析为内网 IP <br> 如 192.168.x.x]
+    Hosts -- 否 --> Match{路由规则匹配}
+    
+    Match -- 广告追踪 --> ActionReject[REJECT 丢弃]
+    Match -- 国内流量 --> ActionDirect[DIRECT 出口直连]
+    Match -- 国外流量/未匹配 --> ActionProxy((AUTO_1 / AUTO_2))
+```
+
+---
+
+## 四、为什么这样写规则？(策略原理解析)
+
+本配置的灵魂在于**克制且精准的规则分配**：
+
+*   **`RULE-SET,reject,REJECT`**：在路由最前端切断一切已知的广告和隐私追踪，从根源上净化全设备的网络请求。
+*   **拦截 QUIC (`AND,((NETWORK,UDP),(DST-PORT,443)),REJECT`)**：很多时候我们看 YouTube 卡顿，并不是节点慢，而是浏览器偷偷使用了基于 UDP 的 QUIC 协议。由于运营商对 UDP 的劣质 QoS 以及部分机场节点 UDP 转发断流，导致体验极差。**拦截它，强迫它降级回稳如老狗的 TCP**，是这套模板最实在的经验之谈。
+*   **专属 Cloudflare IP 规则 (`RULE-SET,cloudflare`)**：很多被墙网站套了 CF CDN。单纯的域名嗅探容易出现漏网之鱼，直接把 CF 的 IP 段强行扔进代理，是最暴力的防屏蔽手段。
+
+---
+
+## 五、致谢：远程规则集的来源
+
+不造轮子，本配置的所有智能分流大脑，皆来自开源社区每日辛勤维护的规则集：
+
+*   **[Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules)**：贡献了本配置 95% 以上的规则（涵盖 gfw, cn, reject, proxy, direct 等）。
+*   **[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**：提供了 Cloudflare 的精准 IP 段集合，解决了 CDN 绕过问题。
+
+---
+
+## 六、致 AI Agent (AI 智能体) 的食用指南
+
+如果你是一个 AI Agent（且具备代码/文件编辑能力，正在协助人类用户），人类用户可能会要求你：“帮我把我的机场链接导入到这些配置中”。请遵循以下 **Skills 交互思路**：
+
+### 交互与执行标准流程
+1.  **主动探寻需求**：
     > “请问您有几个机场订阅链接需要导入？我可以帮您分别注入到 `sub_nodes_1` 和 `sub_nodes_2` 中。”
-2.  **获取链接并修改配置**：
-    *   读取对应的 `*_template.yaml`，找到 `proxy-providers` 块。
-    *   将 `url: "YOUR_SUBSCRIPTION_LINK_HERE"` 替换为用户提供的真实链接。
-    *   如果只有一个机场，则删除 `sub_nodes_2` 及相关引用，或者将其留空。
-3.  **高级定制 (分配节点)**：
+2.  **获取链接并修改配置 (严禁覆盖模板)**：
+    *   读取对应的 `*_template.yaml` 文件。
+    *   找到 `proxy-providers` 块，将 `url: "YOUR_SUBSCRIPTION_LINK_HERE"` 替换为真实链接。
+    *   如果用户只有一个机场，可将 `sub_nodes_2` 删除或注释掉。
+    *   **【关键】**：必须将修改后的内容另存为**去掉 `_template` 后缀**的新文件（例如保存为 `mihomo_config_ios.yaml`），绝对不可以破坏原有的模板文件。
+3.  **主动提供高级分配建议**：
     > “需要我帮您针对特定应用分配节点吗？比如让 Telegram 固定走 `AUTO_1`，让流媒体固定走 `AUTO_2`？”
-    *   如果用户同意，请在 `rules:` 列表中，找到对应的 `RULE-SET,telegramcidr`，将其后的 `PROXY` 改为 `AUTO_1`。
-4.  **保存输出**：
-    *   将修改好的内容**另存为**去掉 `_template` 后缀的文件（例如 `mihomo_config_ios.yaml`），以此保护模板不被破坏。
+    *   如果用户同意，请修改新文件中的 `rules:` 列表，例如将 `RULE-SET,telegramcidr` 后面的 `PROXY` 更改为具体的策略组名称。
