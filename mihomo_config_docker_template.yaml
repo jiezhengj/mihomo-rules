@@ -1,0 +1,249 @@
+# Mihomo (Clash Meta) 配置文件
+# 模式：白名单模式 (默认代理，未明确命中的流量全部走代理)
+
+mixed-port: 7890
+allow-lan: true
+external-controller: 0.0.0.0:9090
+
+unified-delay: true
+
+profile:
+  store-selected: true
+
+tun:
+  enable: false
+  auto-route: true
+  auto-detect-interface: true
+  stack: gvisor
+  dns-hijack:
+    - any:53
+
+mode: rule
+log-level: info
+
+# 本地Hosts配置
+hosts:
+  obsidian.bluebearroad.top: 192.168.31.218
+
+# DNS 配置 (可根据自身需求微调)
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - '*.local'
+    - '*.arpa'
+    - 'time.*.com'
+    - 'ntp.*.com'
+    - '+.market.xiaomi.com'
+    - 'localhost.ptlogin2.qq.com'
+    - '*.msftncsi.com'
+    - 'www.msftconnecttest.com'
+  nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+
+# 节点订阅配置
+# interval 单位为秒，1440分钟 = 86400秒
+proxy-providers:
+  sub_nodes_1:
+    type: http
+    url: "YOUR_SUBSCRIPTION_LINK_HERE"
+    path: ./proxy_providers/sub_nodes_1.yaml
+    interval: 86400
+    # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
+    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
+    health-check:
+      enable: true
+      interval: 600
+      url: http://www.gstatic.com/generate_204
+
+  sub_nodes_2:
+    type: http
+    url: "YOUR_SUBSCRIPTION_LINK_HERE"
+    path: ./proxy_providers/sub_nodes_2.yaml
+    interval: 86400
+    # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
+    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
+    health-check:
+      enable: true
+      interval: 600
+      url: http://www.gstatic.com/generate_204
+
+# 代理组配置
+proxy-groups:
+  - name: PROXY
+    type: select
+    use:
+      - sub_nodes_1
+      - sub_nodes_2
+    proxies:
+      - AUTO
+      - AUTO_1
+      - AUTO_2
+
+  - name: AUTO
+    type: url-test
+    use:
+      - sub_nodes_1
+      - sub_nodes_2
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: AUTO_1
+    type: url-test
+    use:
+      - sub_nodes_1
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: AUTO_2
+    type: url-test
+    use:
+      - sub_nodes_2
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+# 规则订阅配置 (Loyalsoldier - 全量引入)
+# interval 单位为秒，86400秒
+rule-providers:
+  reject:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/reject.txt"
+    path: ./rule_providers/reject.yaml
+    interval: 86400
+
+  icloud:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/icloud.txt"
+    path: ./rule_providers/icloud.yaml
+    interval: 86400
+
+  apple:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/apple.txt"
+    path: ./rule_providers/apple.yaml
+    interval: 86400
+
+  google:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/google.txt"
+    path: ./rule_providers/google.yaml
+    interval: 86400
+
+  proxy:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/proxy.txt"
+    path: ./rule_providers/proxy.yaml
+    interval: 86400
+
+  direct:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/direct.txt"
+    path: ./rule_providers/direct.yaml
+    interval: 86400
+
+  private:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/private.txt"
+    path: ./rule_providers/private.yaml
+    interval: 86400
+
+  gfw:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/gfw.txt"
+    path: ./rule_providers/gfw.yaml
+    interval: 86400
+
+  tld-not-cn:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/tld-not-cn.txt"
+    path: ./rule_providers/tld-not-cn.yaml
+    interval: 86400
+
+  telegramcidr:
+    type: http
+    behavior: ipcidr
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/telegramcidr.txt"
+    path: ./rule_providers/telegramcidr.yaml
+    interval: 86400
+
+  cncidr:
+    type: http
+    behavior: ipcidr
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/cncidr.txt"
+    path: ./rule_providers/cncidr.yaml
+    interval: 86400
+
+  lancidr:
+    type: http
+    behavior: ipcidr
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/lancidr.txt"
+    path: ./rule_providers/lancidr.yaml
+    interval: 86400
+
+  applications:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/applications.txt"
+    path: ./rule_providers/applications.yaml
+    interval: 86400
+
+  cloudflare:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflare/Cloudflare.yaml"
+    path: ./rule_providers/cloudflare.yaml
+    interval: 86400
+
+# 路由规则 (白名单模式匹配)
+rules:
+  # 0. 阻断 QUIC (强制浏览器 fallback 到 TCP)
+  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
+  # 1. 优先放行特殊流量及局域网直连
+  - RULE-SET,applications,DIRECT
+  - RULE-SET,private,DIRECT
+  - RULE-SET,lancidr,DIRECT
+  
+  # 2. 拦截广告和恶意域名
+  - RULE-SET,reject,REJECT
+  
+  # 3. 常见大厂服务直连 / 代理分配
+  - RULE-SET,icloud,DIRECT
+  - RULE-SET,apple,DIRECT
+  - RULE-SET,google,PROXY  # Google 通常需要代理
+  
+  # 4. 匹配 Loyalsoldier 规则中的代理名单 (黑名单触发点)
+  - RULE-SET,proxy,PROXY
+  - RULE-SET,gfw,PROXY
+  - RULE-SET,tld-not-cn,PROXY  # 非中国顶级域名走代理
+  - RULE-SET,telegramcidr,PROXY
+  
+  # 5. 国内服务直连名单
+  - RULE-SET,direct,DIRECT
+  - RULE-SET,cncidr,DIRECT
+  
+  # 6. 补充 GeoData 规则 (利用本地 geoip.metadb 和 GeoSite.dat)
+  - GEOSITE,gfw,PROXY
+  - GEOIP,telegram,PROXY
+  - RULE-SET,cloudflare,PROXY
+  - GEOSITE,CN,DIRECT
+  - GEOIP,lan,DIRECT
+  - GEOIP,CN,DIRECT
+  
+  # 7. 兜底规则: 未命中上述所有规则的流量默认走代理 (这就是白名单模式的核心)
+  - MATCH,PROXY
+
+
