@@ -23,7 +23,7 @@ log-level: info
 
 # 本地Hosts配置
 hosts:
-  obsidian.bluebearroad.top: 192.168.31.218
+  your-private-domain.com: 192.168.x.x
 
 # DNS 配置 (可根据自身需求微调)
 dns:
