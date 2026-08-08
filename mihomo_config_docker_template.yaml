@@ -55,7 +55,7 @@ proxy-providers:
     path: ./proxy_providers/sub_nodes_1.yaml
     interval: 86400
     # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
-    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|剩余|套餐"
+    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
     health-check:
       enable: true
       interval: 600
@@ -67,7 +67,7 @@ proxy-providers:
     path: ./proxy_providers/sub_nodes_2.yaml
     interval: 86400
     # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
-    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|剩余|套餐"
+    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
     health-check:
       enable: true
       interval: 600
