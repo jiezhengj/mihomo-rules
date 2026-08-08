@@ -65,7 +65,19 @@ proxy-providers:
     path: ./proxy_providers/sub_nodes_1.yaml
     interval: 86400
     # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
-    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
+    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|剩余|套餐"
+    health-check:
+      enable: true
+      interval: 600
+      url: http://www.gstatic.com/generate_204
+
+  sub_nodes_2:
+    type: http
+    url: "YOUR_SUBSCRIPTION_LINK_HERE"
+    path: ./proxy_providers/sub_nodes_2.yaml
+    interval: 86400
+    # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
+    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|剩余|套餐"
     health-check:
       enable: true
       interval: 600
@@ -84,6 +96,7 @@ proxy-groups:
       - AUTO_GENERAL
     use:
       - sub_nodes_1
+      - sub_nodes_2
 
   - name: ROUTE_AI
     type: fallback
@@ -116,6 +129,7 @@ proxy-groups:
     type: url-test
     use:
       - sub_nodes_1
+      - sub_nodes_2
     # 强对抗场景 (VLESS, Trojan, Snell) - 排除其它
     exclude-type: "Shadowsocks|ShadowsocksR|Vmess|Http|Socks|Socks5|WireGuard|Tuic|Hysteria|Hysteria2"
     url: http://www.gstatic.com/generate_204
@@ -125,6 +139,7 @@ proxy-groups:
     type: url-test
     use:
       - sub_nodes_1
+      - sub_nodes_2
     # 低延迟加速场景 (SS, SSR, Hysteria/2, TUIC, Wireguard) - 排除其它
     exclude-type: "Vless|Trojan|Snell|Vmess|Http|Socks|Socks5"
     url: http://www.gstatic.com/generate_204
@@ -134,6 +149,7 @@ proxy-groups:
     type: url-test
     use:
       - sub_nodes_1
+      - sub_nodes_2
     # 兜底备用场景 (VMess, HTTP, Socks) - 排除其它
     exclude-type: "Vless|Trojan|Snell|Shadowsocks|ShadowsocksR|WireGuard|Tuic|Hysteria|Hysteria2"
     url: http://www.gstatic.com/generate_204
