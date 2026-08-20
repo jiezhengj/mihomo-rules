@@ -116,20 +116,23 @@ rule-providers:
   sukka_cdn_domain:
     type: http
     behavior: domain
+    format: text
     url: "https://ruleset.skk.moe/Clash/domainset/cdn.txt"
-    path: ./rule_providers/sukka_cdn_domain.yaml
+    path: ./rule_providers/sukka_cdn_domain.txt
     interval: 86400
 
   sukka_cdn_non_ip:
     type: http
     behavior: classical
+    format: text
     url: "https://ruleset.skk.moe/Clash/non_ip/cdn.txt"
-    path: ./rule_providers/sukka_cdn_non_ip.yaml
+    path: ./rule_providers/sukka_cdn_non_ip.txt
     interval: 86400
 
   cloudflare:
     type: http
     behavior: classical
+    format: yaml
     url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflare/Cloudflare.yaml"
     path: ./rule_providers/cloudflare.yaml
     interval: 86400
@@ -137,6 +140,7 @@ rule-providers:
   reject:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/reject.txt"
     path: ./rule_providers/reject.yaml
     interval: 86400
@@ -144,6 +148,7 @@ rule-providers:
   icloud:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/icloud.txt"
     path: ./rule_providers/icloud.yaml
     interval: 86400
@@ -151,6 +156,7 @@ rule-providers:
   apple:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/apple.txt"
     path: ./rule_providers/apple.yaml
     interval: 86400
@@ -158,6 +164,7 @@ rule-providers:
   google:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/google.txt"
     path: ./rule_providers/google.yaml
     interval: 86400
@@ -165,6 +172,7 @@ rule-providers:
   proxy:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/proxy.txt"
     path: ./rule_providers/proxy.yaml
     interval: 86400
@@ -172,6 +180,7 @@ rule-providers:
   direct:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/direct.txt"
     path: ./rule_providers/direct.yaml
     interval: 86400
@@ -179,6 +188,7 @@ rule-providers:
   private:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/private.txt"
     path: ./rule_providers/private.yaml
     interval: 86400
@@ -186,6 +196,7 @@ rule-providers:
   gfw:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/gfw.txt"
     path: ./rule_providers/gfw.yaml
     interval: 86400
@@ -193,6 +204,7 @@ rule-providers:
   tld-not-cn:
     type: http
     behavior: domain
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/tld-not-cn.txt"
     path: ./rule_providers/tld-not-cn.yaml
     interval: 86400
@@ -200,6 +212,7 @@ rule-providers:
   telegramcidr:
     type: http
     behavior: ipcidr
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/telegramcidr.txt"
     path: ./rule_providers/telegramcidr.yaml
     interval: 86400
@@ -207,6 +220,7 @@ rule-providers:
   cncidr:
     type: http
     behavior: ipcidr
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/cncidr.txt"
     path: ./rule_providers/cncidr.yaml
     interval: 86400
@@ -214,6 +228,7 @@ rule-providers:
   lancidr:
     type: http
     behavior: ipcidr
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/lancidr.txt"
     path: ./rule_providers/lancidr.yaml
     interval: 86400
@@ -221,6 +236,7 @@ rule-providers:
   applications:
     type: http
     behavior: classical
+    format: yaml
     url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/applications.txt"
     path: ./rule_providers/applications.yaml
     interval: 86400
