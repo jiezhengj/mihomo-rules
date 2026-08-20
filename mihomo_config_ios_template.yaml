@@ -113,6 +113,27 @@ proxy-groups:
 # 规则订阅配置 (Loyalsoldier - 全量引入)
 # interval 单位为秒，86400秒
 rule-providers:
+  sukka_cdn_domain:
+    type: http
+    behavior: domain
+    url: "https://ruleset.skk.moe/Clash/domainset/cdn.txt"
+    path: ./rule_providers/sukka_cdn_domain.yaml
+    interval: 86400
+
+  sukka_cdn_non_ip:
+    type: http
+    behavior: classical
+    url: "https://ruleset.skk.moe/Clash/non_ip/cdn.txt"
+    path: ./rule_providers/sukka_cdn_non_ip.yaml
+    interval: 86400
+
+  cloudflare:
+    type: http
+    behavior: classical
+    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflare/Cloudflare.yaml"
+    path: ./rule_providers/cloudflare.yaml
+    interval: 86400
+
   reject:
     type: http
     behavior: domain
@@ -204,49 +225,45 @@ rule-providers:
     path: ./rule_providers/applications.yaml
     interval: 86400
 
-  cloudflare:
-    type: http
-    behavior: classical
-    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflare/Cloudflare.yaml"
-    path: ./rule_providers/cloudflare.yaml
-    interval: 86400
-
 # 路由规则 (白名单模式匹配)
 rules:
   # 0. 阻断 QUIC (强制浏览器 fallback 到 TCP)
   - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
+
   # 1. 优先放行特殊流量及局域网直连
   - RULE-SET,applications,DIRECT
   - RULE-SET,private,DIRECT
   - RULE-SET,lancidr,DIRECT
-  
+  - GEOIP,lan,DIRECT
+
   # 2. 拦截广告和恶意域名
   - RULE-SET,reject,REJECT
-  
+
   # 3. 常见大厂服务直连 / 代理分配
   - RULE-SET,icloud,DIRECT
   - RULE-SET,apple,DIRECT
   - RULE-SET,google,PROXY  # Google 通常需要代理
-  
-  # 4. 匹配 Loyalsoldier 规则中的代理名单 (黑名单触发点)
-  - RULE-SET,proxy,PROXY
-  - RULE-SET,gfw,PROXY
-  - RULE-SET,tld-not-cn,PROXY  # 非中国顶级域名走代理
-  - RULE-SET,telegramcidr,PROXY
-  
-  # 5. 国内服务直连名单
+
+  # 4. 国内服务直连名单 (提权至 CDN 之前，确保国内服务绝对直连不误伤)
   - RULE-SET,direct,DIRECT
   - RULE-SET,cncidr,DIRECT
-  
-  # 6. 补充 GeoData 规则 (利用本地 geoip.metadb 和 GeoSite.dat)
-  - GEOSITE,gfw,PROXY
-  - GEOIP,telegram,PROXY
-  - RULE-SET,cloudflare,PROXY
   - GEOSITE,CN,DIRECT
-  - GEOIP,lan,DIRECT
   - GEOIP,CN,DIRECT
-  
-  # 7. 兜底规则: 未命中上述所有规则的流量默认走代理 (这就是白名单模式的核心)
+
+  # 5. 静态大流量 / CDN 分流 (统一走 PROXY 策略组调度)
+  - RULE-SET,sukka_cdn_domain,PROXY
+  - RULE-SET,sukka_cdn_non_ip,PROXY
+  - RULE-SET,cloudflare,PROXY
+
+  # 6. 匹配 Loyalsoldier 规则中的代理名单 (黑名单触发点)
+  - RULE-SET,proxy,PROXY
+  - RULE-SET,gfw,PROXY
+  - GEOSITE,gfw,PROXY
+  - RULE-SET,tld-not-cn,PROXY  # 非中国顶级域名走代理
+  - RULE-SET,telegramcidr,PROXY
+  - GEOIP,telegram,PROXY
+
+  # 7. 兜底规则: 未命中上述所有规则的流量默认走代理 (白名单模式核心)
   - MATCH,PROXY
 
 

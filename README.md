@@ -63,7 +63,7 @@ graph TD
     
     Match -- 广告追踪/恶意域名 --> ActionReject[REJECT 丢弃]
     Match -- GeoIP CN / 常用国内域 --> ActionDirect[DIRECT 直连]
-    Match -- Cloudflare 等特殊 IP --> ActionProxy[强制送入代理组]
+    Match -- Sukka CDN / Cloudflare IP --> ActionProxy[送入代理组 / 大流量节点]
     Match -- 兜底规则 (MATCH) --> ActionProxy
     
     ActionProxy --> Selector((代理组调度))
@@ -96,8 +96,9 @@ graph TD
 本配置的灵魂在于**克制且精准的规则分配**：
 
 *   **`RULE-SET,reject,REJECT`**：在路由最前端切断一切已知的广告和隐私追踪，从根源上净化全设备的网络请求。
+*   **国内直连提权 (`direct`, `cncidr`, `GEOSITE,CN`, `GEOIP,CN`)**：置于 CDN 规则之前，确保所有国内日常访问（包括使用部分多线 CDN 的国内网站）绝对优先走 `DIRECT`，防止被后续海外 CDN 规则误判。
+*   **静态大流量 CDN 规则 (`sukka_cdn_domain`, `sukka_cdn_non_ip`, `cloudflare`)**：引入 Sukka 维护的高精度 CDN 规则集与 Cloudflare IP 段，精准分离 Twitter/X (`twimg.com`)、Reddit (`redd.it`) 等多媒体静态资源。拥有低倍率或大流量节点的用户可直接将这部分流量引流至专用节点，实现“主 API 走优质专线、图片视频走低倍率节点”的动静分离。
 *   **拦截 QUIC (`AND,((NETWORK,UDP),(DST-PORT,443)),REJECT`)**：很多时候我们看 YouTube 卡顿，并不是节点慢，而是浏览器偷偷使用了基于 UDP 的 QUIC 协议。由于运营商对 UDP 的劣质 QoS 以及部分机场节点 UDP 转发断流，导致体验极差。**拦截它，强迫它降级回稳如老狗的 TCP**，是这套模板最实在的经验之谈。
-*   **专属 Cloudflare IP 规则 (`RULE-SET,cloudflare`)**：很多被墙网站套了 CF CDN。单纯的域名嗅探容易出现漏网之鱼，直接把 CF 的 IP 段强行扔进代理，是最暴力的防屏蔽手段。
 
 ---
 
@@ -105,7 +106,8 @@ graph TD
 
 不造轮子，本配置的所有智能分流大脑，皆来自开源社区每日辛勤维护的规则集：
 
-*   **[Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules)**：贡献了本配置 95% 以上的规则（涵盖 gfw, cn, reject, proxy, direct 等）。
+*   **[Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules)**：贡献了本配置 90% 以上的基础规则（涵盖 gfw, cn, reject, proxy, direct 等）。
+*   **[Sukka's Ruleset](https://ruleset.skk.moe)** / **[SukkaW/Surge](https://github.com/SukkaW/Surge)**：贡献了高精度的公共与海外静态资源 CDN 规则集，实现图片与音视频等大流量媒体与 API 的动静分离。
 *   **[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**：提供了 Cloudflare 的精准 IP 段集合，解决了 CDN 绕过问题。
 
 ---

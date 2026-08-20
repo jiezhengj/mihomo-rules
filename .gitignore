@@ -2,3 +2,6 @@ mihomo_config_desktop.yaml
 mihomo_config_android.yaml
 mihomo_config_ios.yaml
 mihomo_config_docker.yaml
+mihomo_config_ios_temp.yaml
+mihomo_config_docker_temp.yaml
+mihomo_config_android_temp.yaml
