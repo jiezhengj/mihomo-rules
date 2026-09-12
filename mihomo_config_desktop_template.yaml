@@ -20,9 +20,12 @@ tun:
   enable: true
   auto-route: true
   auto-detect-interface: true
-  stack: gvisor
+  stack: mixed
   dns-hijack:
     - any:53
+  route-exclude-address:
+    - 100.64.0.0/10
+    - fd7a:115c:a1e0::/48
 
 sniffer:
   enable: true
@@ -52,6 +55,10 @@ dns:
     - 'localhost.ptlogin2.qq.com'
     - '*.msftncsi.com'
     - 'www.msftconnecttest.com'
+    - '*.ts.net'
+    - '*.tailscale.com'
+    - 'controlplane.tailscale.com'
+    - 'log.tailscale.io'
   nameserver:
     - 223.5.5.5
     - 114.114.114.114
@@ -290,6 +297,17 @@ rule-providers:
 rules:
   # 0. 阻断 QUIC (强制浏览器 fallback 到 TCP)
   - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
+
+  # 0.1 Tailscale 专属放行 (保障控制通信与点对点打洞)
+  - PROCESS-NAME,tailscaled.exe,DIRECT
+  - PROCESS-NAME,tailscale-ipn.exe,DIRECT
+  - PROCESS-NAME,Tailscale,DIRECT
+  - PROCESS-NAME,io.tailscale.ipn.macsys.network-extension,DIRECT
+  - PROCESS-NAME,IPNExtension,DIRECT
+  - DOMAIN-SUFFIX,tailscale.com,DIRECT
+  - DOMAIN-SUFFIX,ts.net,DIRECT
+  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+  - IP-CIDR6,fd7a:115c:a1e0::/48,DIRECT,no-resolve
 
   # 1. 优先放行特殊流量及局域网直连
   - RULE-SET,applications,DIRECT
