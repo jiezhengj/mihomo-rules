@@ -39,12 +39,12 @@
 | **节点正则过滤 (`exclude-filter`)** | ✅ 支持 (精确剔除无用节点) | ✅ 支持 | ⚠️ 使用先行断言兼容正则 | ✅ 支持 |
 | **协议类型过滤 (`exclude-type`)** | ✅ 支持 (按需筛选协议) | ⚪ 未使用 (可按需添加) | ⚠️ 视客户端而定 | ⚪ 未使用 (可按需添加) |
 | **私有内网 Hosts 解析** | ⚪ 无需 | ⚪ 无需 | ⚪ 无需 | ✅ 配置了 `hosts:` (供局域网解析) |
-| **远程桌面直连** | ✅ 内置 UU远程 进程与打洞放行 | ⚪ 无需 | ⚪ 无需 | ⚪ 无需 |
+| **代理组策略复杂度** | 高 (`AUTO_STRICT`, `SPEED` 等) | 中 (`AUTO_1`, `AUTO_2` / `AUTO`) | 低 (`AUTO_1`, `AUTO_2` / `AUTO`) | 中 (`AUTO_1`, `AUTO_2` / `AUTO`) |
 
 ## 差异考量详解
 
 1. **iOS 的兼容性考量**：iOS 平台上的客户端生态比较复杂，哪怕是基于 Clash 内核的工具（如 Stash），在实际测试中对 `exclude-filter`（正则）和 `exclude-type` 等高级语法的解析也偶有兼容性问题；而普及率极高的 Shadowrocket（小火箭）更是由于采用自研解析器，对这些语法支持不佳。为了确保模板的绝对稳定与兼容，我们在 iOS 版本中使用兼容性最好的负向先行断言过滤无用节点，退回最稳健的基础策略组模式。
-2. **Desktop 的火力全开与低延迟串流**：桌面端性能充裕且客户端支持完整。我们利用 `exclude-type` 剥离出稳定性要求极高的协议放进 `AUTO_STRICT`（如 Vless/Trojan），把追求速度的协议放进 `AUTO_SPEED`，实现精细化的分层调度。同时，桌面端内置了精细的 Fake-IP 过滤与进程级放行规则，支持与 UU远程 等串流工具在 TUN 模式下无缝共存，兼顾 P2P 打洞穿透与低延迟控制。
+2. **Desktop 的火力全开**：桌面端性能充裕且客户端支持完整。我们利用 `exclude-type` 剥离出稳定性要求极高的协议放进 `AUTO_STRICT`（如 Vless/Trojan），把追求速度的协议放进 `AUTO_SPEED`，实现精细化的分层调度。同时采用 mixed 协议栈（TCP 系统原生、UDP gvisor），在保障大文件与高带宽传输性能的同时有效降低系统开销。
 3. **Docker 的局域网定位**：既然它在内网做代理服务器，就需要解决内网域名的解析问题。因此只有它启用了 `hosts:` 字段映射（例如 `your-private-domain.com: 192.168.x.x`），并且关闭了破坏宿主机网络的 TUN。
 
 # 三、流量路由逻辑图示 (Mermaid)
@@ -55,11 +55,8 @@
 
 ```mermaid
 graph TD
-    App[应用层流量] --> ProcessMatch{本地特权进程白名单?}
-    ProcessMatch -- UU远程等核心进程 --> ActionDirectProc[DIRECT 直连出站]
-    ProcessMatch -- 其他应用 --> TUN[TUN 接口接管]
-    
-    TUN --> QUIC{是否为常规 QUIC / UDP 443 ?}
+    App[应用层流量] --> TUN[TUN 接口接管]
+    TUN --> QUIC{是否为 QUIC / UDP 443 ?}
     QUIC -- 是 (拦截) --> RejectQuic[强制 REJECT <br> 促使浏览器降级 TCP]
     QUIC -- 否 --> Sniff[Sniffer 嗅探真实域名]
     Sniff --> Match{路由规则匹配}
@@ -98,14 +95,11 @@ graph TD
 
 本配置的灵魂在于**克制且精准的规则分配**：
 
-*   **远程桌面与低延迟串流兼容 (以 UU远程 为例)**：
-    *   **Fake-IP 免疫过滤 (`fake-ip-filter`)**：将远程信令与打洞服务域名（如 `+.uuyc.163.com`）纳入直连解析名单，杜绝假 IP 污染，确保 STUN 探测得到真实公网 IP。
-    *   **核心进程直连白名单**：置顶放行客户端与核心传输进程，确保 P2P 音视频串流绝不误走代理流量，杜绝卡顿与流量浪费。
-    *   **高性能混合协议栈 (`stack: mixed`)**：在桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），兼顾性能与低开销。
+*   **高性能混合协议栈 (`stack: mixed`)**：在桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），兼顾性能与低开销。
 *   **`RULE-SET,reject,REJECT`**：在路由最前端切断一切已知的广告和隐私追踪，从根源上净化全设备的网络请求。
 *   **国内直连提权 (`direct`, `cncidr`, `GEOSITE,CN`, `GEOIP,CN`)**：置于 CDN 规则之前，确保所有国内日常访问（包括使用部分多线 CDN 的国内网站）绝对优先走 `DIRECT`，防止被后续海外 CDN 规则误判。
 *   **静态大流量 CDN 规则 (`sukka_cdn_domain`, `sukka_cdn_non_ip`, `cloudflare`)**：引入 Sukka 维护的高精度 CDN 规则集与 Cloudflare IP 段，精准分离 Twitter/X (`twimg.com`)、Reddit (`redd.it`) 等多媒体静态资源。拥有低倍率或大流量节点的用户可直接将这部分流量引流至专用节点，实现“主 API 走优质专线、图片视频走低倍率节点”的动静分离。
-*   **拦截常规 QUIC (`AND,((NETWORK,UDP),(DST-PORT,443)),REJECT`)**：在完成受信任进程放行后，拦截浏览器的 UDP 443 QUIC 协议，强迫其降级回基于 TCP 的 HTTP/2，避免运营商对 UDP 的恶劣 QoS 与节点断流。
+*   **拦截 QUIC (`AND,((NETWORK,UDP),(DST-PORT,443)),REJECT`)**：很多时候我们看 YouTube 卡顿，并不是节点慢，而是浏览器偷偷使用了基于 UDP 的 QUIC 协议。由于运营商对 UDP 的劣质 QoS 以及部分机场节点 UDP 转发断流，导致体验极差。**拦截它，强迫它降级回稳如老狗的 TCP**，是这套模板最实在的经验之谈。
 
 # 五、致谢：远程规则集的来源
 

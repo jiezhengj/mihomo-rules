@@ -53,11 +53,6 @@ dns:
     - 'localhost.ptlogin2.qq.com'
     - '*.msftncsi.com'
     - 'www.msftconnecttest.com'
-    # UU 远程与网易调度域 (保障直连与真实 IP 打洞)
-    - '+.uuyc.163.com'
-    - '+.uuremote.com'
-    - '+.nrd.nie.163.com'
-    - '+.easebar.com'
   nameserver:
     - 223.5.5.5
     - 114.114.114.114
@@ -278,29 +273,7 @@ rule-providers:
 
 # 路由规则 (白名单模式匹配)
 rules:
-  # 0.1 远程桌面与核心穿透进程放行 (置于 QUIC 阻断前，防止 UDP 443 串流被误杀)
-  # UU 远程专属放行 (macOS & Windows 进程、STUN 打洞与信令通信)
-  - PROCESS-NAME,UURemote,DIRECT
-  - PROCESS-NAME,UURemoteService,DIRECT
-  - PROCESS-NAME,UURemoteDaemon,DIRECT
-  - PROCESS-NAME,UURemoteServer,DIRECT
-  - PROCESS-NAME,UURemoteHelper,DIRECT
-  - PROCESS-NAME,UURemoteUpdater,DIRECT
-  - PROCESS-NAME,uuyc-cli,DIRECT
-  - PROCESS-NAME,uuyc-mux,DIRECT
-  - PROCESS-NAME,UURemote.exe,DIRECT
-  - PROCESS-NAME,UURemoteService.exe,DIRECT
-  - PROCESS-NAME,UURemoteDaemon.exe,DIRECT
-  - PROCESS-NAME,UURemoteServer.exe,DIRECT
-  - PROCESS-NAME,UURemoteHelper.exe,DIRECT
-  - PROCESS-NAME,UURemoteUpdater.exe,DIRECT
-  - PROCESS-NAME,uuyc-cli.exe,DIRECT
-  - DOMAIN-SUFFIX,uuyc.163.com,DIRECT
-  - DOMAIN-SUFFIX,uuremote.com,DIRECT
-  - DOMAIN-SUFFIX,easebar.com,DIRECT
-  - DOMAIN-KEYWORD,uuremote,DIRECT
-
-  # 0.2 阻断常规浏览器 QUIC (强制浏览器 fallback 到 TCP)
+  # 0. 阻断 QUIC (强制浏览器 fallback 到 TCP)
   - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
 
   # 1. 优先放行特殊流量及局域网直连
