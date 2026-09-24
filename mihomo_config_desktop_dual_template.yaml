@@ -1,0 +1,409 @@
+# Mihomo (Clash Meta) 配置文件
+# 模式：白名单模式 (默认代理，未明确命中的流量全部走代理)
+
+mixed-port: 7890
+allow-lan: false
+external-controller:
+external-controller-cors:
+  allow-private-network: true
+  allow-origins:
+    - https://yacd.metacubex.one
+    - https://metacubex.github.io
+    - https://board.zash.run.place
+
+unified-delay: true
+
+profile:
+  store-selected: true
+
+tun:
+  enable: true
+  auto-route: true
+  auto-detect-interface: true
+  stack: mixed
+  dns-hijack:
+    - any:53
+  route-exclude-address:
+    - 100.64.0.0/10
+    - fd7a:115c:a1e0::/48
+
+sniffer:
+  enable: true
+  sniff:
+    tls:
+      ports: [443, 8443]
+    http:
+      ports: [80, 8080-8880]
+
+mode: rule
+log-level: info
+
+# DNS 配置 (可根据自身需求微调)
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - '*.local'
+    - '*.arpa'
+    - 'time.*.com'
+    - 'ntp.*.com'
+    - '+.market.xiaomi.com'
+    - 'localhost.ptlogin2.qq.com'
+    - '*.msftncsi.com'
+    - 'www.msftconnecttest.com'
+    - '*.ts.net'
+    - '*.tailscale.com'
+    - 'controlplane.tailscale.com'
+    - 'log.tailscale.io'
+    # UU 远程与网易调度域 (保障直连与真实 IP 打洞)
+    - '+.uuyc.163.com'
+    - '+.uuremote.com'
+    - '+.nrd.nie.163.com'
+    - '+.easebar.com'
+    # 绿联 NAS 调度与穿透域 (保障真实 IP 直连与打洞)
+    - '+.ugnas.cloud'
+    - '+.ugnas.com'
+    - '+.ugreen.cloud'
+    - '+.ugreen.com'
+    - '+.uglink.cn'
+    - '+.peergine.com'
+    - '+.pptun.com'
+  nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+
+# 节点订阅配置
+# interval 单位为秒，1440分钟 = 86400秒
+proxy-providers:
+  sub_nodes_1:
+    type: http
+    url: "YOUR_SUBSCRIPTION_LINK_HERE"
+    path: ./proxy_providers/sub_nodes_1.yaml
+    interval: 86400
+    # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
+    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
+    health-check:
+      enable: true
+      interval: 600
+      url: http://www.gstatic.com/generate_204
+
+  sub_nodes_2:
+    type: http
+    url: "YOUR_SUBSCRIPTION_LINK_HERE"
+    path: ./proxy_providers/sub_nodes_2.yaml
+    interval: 86400
+    # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
+    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
+    health-check:
+      enable: true
+      interval: 600
+      url: http://www.gstatic.com/generate_204
+
+# 代理组配置
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - ROUTE_GLOBAL
+      - ROUTE_AI
+      - ROUTE_SPEED
+      - AUTO_STRICT
+      - AUTO_SPEED
+      - AUTO_GENERAL
+    use:
+      - sub_nodes_1
+      - sub_nodes_2
+
+  - name: ROUTE_AI
+    type: fallback
+    proxies:
+      - AUTO_STRICT
+      - AUTO_SPEED
+      - AUTO_GENERAL
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: ROUTE_SPEED
+    type: fallback
+    proxies:
+      - AUTO_SPEED
+      - AUTO_STRICT
+      - AUTO_GENERAL
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: ROUTE_GLOBAL
+    type: fallback
+    proxies:
+      - AUTO_GENERAL
+      - AUTO_SPEED
+      - AUTO_STRICT
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: AUTO_STRICT
+    type: url-test
+    use:
+      - sub_nodes_1
+      - sub_nodes_2
+    # 强对抗场景 (VLESS, Trojan, Snell) - 排除其它
+    exclude-type: "Shadowsocks|ShadowsocksR|Vmess|Http|Socks|Socks5|WireGuard|Tuic|Hysteria|Hysteria2"
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: AUTO_SPEED
+    type: url-test
+    use:
+      - sub_nodes_1
+      - sub_nodes_2
+    # 低延迟加速场景 (SS, SSR, Hysteria/2, TUIC, Wireguard) - 排除其它
+    exclude-type: "Vless|Trojan|Snell|Vmess|Http|Socks|Socks5"
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: AUTO_GENERAL
+    type: url-test
+    use:
+      - sub_nodes_1
+      - sub_nodes_2
+    # 兜底备用场景 (VMess, HTTP, Socks) - 排除其它
+    exclude-type: "Vless|Trojan|Snell|Shadowsocks|ShadowsocksR|WireGuard|Tuic|Hysteria|Hysteria2"
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+# 规则订阅配置 (Loyalsoldier - 全量引入)
+# interval 单位为秒，86400秒
+rule-providers:
+  sukka_cdn_domain:
+    type: http
+    behavior: domain
+    format: text
+    url: "https://ruleset.skk.moe/Clash/domainset/cdn.txt"
+    path: ./rule_providers/sukka_cdn_domain.txt
+    interval: 86400
+
+  sukka_cdn_non_ip:
+    type: http
+    behavior: classical
+    format: text
+    url: "https://ruleset.skk.moe/Clash/non_ip/cdn.txt"
+    path: ./rule_providers/sukka_cdn_non_ip.txt
+    interval: 86400
+
+  cloudflare:
+    type: http
+    behavior: classical
+    format: yaml
+    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflare/Cloudflare.yaml"
+    path: ./rule_providers/cloudflare.yaml
+    interval: 86400
+
+  reject:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/reject.txt"
+    path: ./rule_providers/reject.yaml
+    interval: 86400
+
+  icloud:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/icloud.txt"
+    path: ./rule_providers/icloud.yaml
+    interval: 86400
+
+  apple:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/apple.txt"
+    path: ./rule_providers/apple.yaml
+    interval: 86400
+
+  google:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/google.txt"
+    path: ./rule_providers/google.yaml
+    interval: 86400
+
+  proxy:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/proxy.txt"
+    path: ./rule_providers/proxy.yaml
+    interval: 86400
+
+  direct:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/direct.txt"
+    path: ./rule_providers/direct.yaml
+    interval: 86400
+
+  private:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/private.txt"
+    path: ./rule_providers/private.yaml
+    interval: 86400
+
+  gfw:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/gfw.txt"
+    path: ./rule_providers/gfw.yaml
+    interval: 86400
+
+  tld-not-cn:
+    type: http
+    behavior: domain
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/tld-not-cn.txt"
+    path: ./rule_providers/tld-not-cn.yaml
+    interval: 86400
+
+  telegramcidr:
+    type: http
+    behavior: ipcidr
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/telegramcidr.txt"
+    path: ./rule_providers/telegramcidr.yaml
+    interval: 86400
+
+  cncidr:
+    type: http
+    behavior: ipcidr
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/cncidr.txt"
+    path: ./rule_providers/cncidr.yaml
+    interval: 86400
+
+  lancidr:
+    type: http
+    behavior: ipcidr
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/lancidr.txt"
+    path: ./rule_providers/lancidr.yaml
+    interval: 86400
+
+  applications:
+    type: http
+    behavior: classical
+    format: yaml
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/applications.txt"
+    path: ./rule_providers/applications.yaml
+    interval: 86400
+
+# 路由规则 (白名单模式匹配)
+rules:
+  # 0.1 核心穿透与远程桌面进程放行 (置于 QUIC 阻断前，防止 UDP 443 串流被误杀)
+  # Tailscale 专属放行 (保障控制通信与点对点打洞)
+  - PROCESS-NAME,tailscaled.exe,DIRECT
+  - PROCESS-NAME,tailscale-ipn.exe,DIRECT
+  - PROCESS-NAME,Tailscale,DIRECT
+  - PROCESS-NAME,io.tailscale.ipn.macsys.network-extension,DIRECT
+  - PROCESS-NAME,IPNExtension,DIRECT
+  - DOMAIN-SUFFIX,tailscale.com,DIRECT
+  - DOMAIN-SUFFIX,ts.net,DIRECT
+  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+  - IP-CIDR6,fd7a:115c:a1e0::/48,DIRECT,no-resolve
+
+  # UU 远程专属放行 (macOS & Windows 进程、STUN 打洞与信令通信)
+  - PROCESS-NAME,UURemote,DIRECT
+  - PROCESS-NAME,UURemoteService,DIRECT
+  - PROCESS-NAME,UURemoteDaemon,DIRECT
+  - PROCESS-NAME,UURemoteServer,DIRECT
+  - PROCESS-NAME,UURemoteHelper,DIRECT
+  - PROCESS-NAME,UURemoteUpdater,DIRECT
+  - PROCESS-NAME,uuyc-cli,DIRECT
+  - PROCESS-NAME,uuyc-mux,DIRECT
+  - PROCESS-NAME,UURemote.exe,DIRECT
+  - PROCESS-NAME,UURemoteService.exe,DIRECT
+  - PROCESS-NAME,UURemoteDaemon.exe,DIRECT
+  - PROCESS-NAME,UURemoteServer.exe,DIRECT
+  - PROCESS-NAME,UURemoteHelper.exe,DIRECT
+  - PROCESS-NAME,UURemoteUpdater.exe,DIRECT
+  - PROCESS-NAME,uuyc-cli.exe,DIRECT
+  - DOMAIN-SUFFIX,uuyc.163.com,DIRECT
+  - DOMAIN-SUFFIX,uuremote.com,DIRECT
+  - DOMAIN-SUFFIX,easebar.com,DIRECT
+  - DOMAIN-KEYWORD,uuremote,DIRECT
+
+  # 绿联 NAS 专属放行 (macOS & Windows 客户端、同步空间、P2P穿透与播放器)
+  - PROCESS-NAME,UGREEN NAS,DIRECT
+  - PROCESS-NAME,UGREEN NAS Helper,DIRECT
+  - PROCESS-NAME,syncspace_pro,DIRECT
+  - PROCESS-NAME,UgAgent,DIRECT
+  - PROCESS-NAME,video-player,DIRECT
+  - PROCESS-NAME,video-player Helper,DIRECT
+  - PROCESS-NAME,UGREEN NAS.exe,DIRECT
+  - PROCESS-NAME,UGREEN NAS Helper.exe,DIRECT
+  - PROCESS-NAME,syncspace_pro.exe,DIRECT
+  - PROCESS-NAME,UgAgent.exe,DIRECT
+  - PROCESS-NAME,video-player.exe,DIRECT
+  - PROCESS-NAME,video-player Helper.exe,DIRECT
+  - PROCESS-NAME,UGREEN Cloud.exe,DIRECT
+  - PROCESS-NAME,uglink.exe,DIRECT
+  - DOMAIN-SUFFIX,ugnas.cloud,DIRECT
+  - DOMAIN-SUFFIX,ugnas.com,DIRECT
+  - DOMAIN-SUFFIX,ugreen.cloud,DIRECT
+  - DOMAIN-SUFFIX,ugreen.com,DIRECT
+  - DOMAIN-SUFFIX,ugreengroup.com,DIRECT
+  - DOMAIN-SUFFIX,uglink.cn,DIRECT
+  - DOMAIN-SUFFIX,peergine.com,DIRECT
+  - DOMAIN-SUFFIX,pptun.com,DIRECT
+  - DOMAIN-KEYWORD,ugreen,DIRECT
+  - DOMAIN-KEYWORD,ugnas,DIRECT
+
+  # 0.2 阻断常规浏览器 QUIC (强制浏览器 fallback 到 TCP)
+  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
+
+  # 1. 优先放行特殊流量及局域网直连
+  - RULE-SET,applications,DIRECT
+  - RULE-SET,private,DIRECT
+  - RULE-SET,lancidr,DIRECT
+  - GEOIP,lan,DIRECT
+
+  # 2. 拦截广告和恶意域名
+  - RULE-SET,reject,REJECT
+
+  # 3. 常见大厂服务直连 / 敏感代理分配
+  - RULE-SET,icloud,DIRECT
+  - RULE-SET,apple,DIRECT
+  - RULE-SET,google,ROUTE_AI  # Google、Gemini 对 IP 极度敏感，走高可用 AI 路由
+
+  # 4. 国内服务直连名单 (提权至 CDN 之前，确保国内服务绝对直连不误伤)
+  - RULE-SET,direct,DIRECT
+  - RULE-SET,cncidr,DIRECT
+  - GEOSITE,CN,DIRECT
+  - GEOIP,CN,DIRECT
+
+  # 5. 静态大流量 / CDN 分流 (统一走 PROXY 策略组调度)
+  - RULE-SET,sukka_cdn_domain,PROXY
+  - RULE-SET,sukka_cdn_non_ip,PROXY
+  - RULE-SET,cloudflare,PROXY
+
+  # 6. 境外常规服务与黑名单代理 (Twitter 主域、Telegram、通用 GFW 等)
+  - RULE-SET,telegramcidr,ROUTE_SPEED   # TG 低延迟及 UDP，走高可用加速路由
+  - GEOIP,telegram,ROUTE_SPEED
+  - RULE-SET,proxy,ROUTE_AI   # 混杂 Copilot 等 AI 域名，走高可用 AI 路由
+  - RULE-SET,gfw,ROUTE_AI     # 同上，确保极高可用性
+  - GEOSITE,gfw,ROUTE_AI
+  - RULE-SET,tld-not-cn,PROXY    # 普通外网流量，交回给可干预的 PROXY 组
+
+  # 7. 兜底规则: 未命中上述所有规则的流量默认走代理 (白名单模式核心)
+  - MATCH,PROXY
+
+

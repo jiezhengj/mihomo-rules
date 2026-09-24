@@ -1,5 +1,6 @@
 # Mihomo (Clash Meta) 配置文件
 # 模式：白名单模式 (默认代理，未明确命中的流量全部走代理)
+# 架构：单机场 (Single Provider) 精简版
 
 mixed-port: 7890
 allow-lan: false
@@ -59,6 +60,19 @@ dns:
     - '*.tailscale.com'
     - 'controlplane.tailscale.com'
     - 'log.tailscale.io'
+    # UU 远程与网易调度域 (保障直连与真实 IP 打洞)
+    - '+.uuyc.163.com'
+    - '+.uuremote.com'
+    - '+.nrd.nie.163.com'
+    - '+.easebar.com'
+    # 绿联 NAS 调度与穿透域 (保障真实 IP 直连与打洞)
+    - '+.ugnas.cloud'
+    - '+.ugnas.com'
+    - '+.ugreen.cloud'
+    - '+.ugreen.com'
+    - '+.uglink.cn'
+    - '+.peergine.com'
+    - '+.pptun.com'
   nameserver:
     - 223.5.5.5
     - 114.114.114.114
@@ -66,22 +80,10 @@ dns:
 # 节点订阅配置
 # interval 单位为秒，1440分钟 = 86400秒
 proxy-providers:
-  sub_nodes_1:
+  sub_nodes:
     type: http
     url: "YOUR_SUBSCRIPTION_LINK_HERE"
-    path: ./proxy_providers/sub_nodes_1.yaml
-    interval: 86400
-    # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
-    exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
-    health-check:
-      enable: true
-      interval: 600
-      url: http://www.gstatic.com/generate_204
-
-  sub_nodes_2:
-    type: http
-    url: "YOUR_SUBSCRIPTION_LINK_HERE"
-    path: ./proxy_providers/sub_nodes_2.yaml
+    path: ./proxy_providers/sub_nodes.yaml
     interval: 86400
     # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 (?i) 忽略大小写)
     exclude-filter: "(?i)香港|HK|HongKong|Hong Kong|过滤|剩余|套餐"
@@ -102,8 +104,7 @@ proxy-groups:
       - AUTO_SPEED
       - AUTO_GENERAL
     use:
-      - sub_nodes_1
-      - sub_nodes_2
+      - sub_nodes
 
   - name: ROUTE_AI
     type: fallback
@@ -135,8 +136,7 @@ proxy-groups:
   - name: AUTO_STRICT
     type: url-test
     use:
-      - sub_nodes_1
-      - sub_nodes_2
+      - sub_nodes
     # 强对抗场景 (VLESS, Trojan, Snell) - 排除其它
     exclude-type: "Shadowsocks|ShadowsocksR|Vmess|Http|Socks|Socks5|WireGuard|Tuic|Hysteria|Hysteria2"
     url: http://www.gstatic.com/generate_204
@@ -145,8 +145,7 @@ proxy-groups:
   - name: AUTO_SPEED
     type: url-test
     use:
-      - sub_nodes_1
-      - sub_nodes_2
+      - sub_nodes
     # 低延迟加速场景 (SS, SSR, Hysteria/2, TUIC, Wireguard) - 排除其它
     exclude-type: "Vless|Trojan|Snell|Vmess|Http|Socks|Socks5"
     url: http://www.gstatic.com/generate_204
@@ -155,8 +154,7 @@ proxy-groups:
   - name: AUTO_GENERAL
     type: url-test
     use:
-      - sub_nodes_1
-      - sub_nodes_2
+      - sub_nodes
     # 兜底备用场景 (VMess, HTTP, Socks) - 排除其它
     exclude-type: "Vless|Trojan|Snell|Shadowsocks|ShadowsocksR|WireGuard|Tuic|Hysteria|Hysteria2"
     url: http://www.gstatic.com/generate_204
@@ -295,10 +293,8 @@ rule-providers:
 
 # 路由规则 (白名单模式匹配)
 rules:
-  # 0. 阻断 QUIC (强制浏览器 fallback 到 TCP)
-  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
-
-  # 0.1 Tailscale 专属放行 (保障控制通信与点对点打洞)
+  # 0.1 核心穿透与远程桌面进程放行 (置于 QUIC 阻断前，防止 UDP 443 串流被误杀)
+  # Tailscale 专属放行 (保障控制通信与点对点打洞)
   - PROCESS-NAME,tailscaled.exe,DIRECT
   - PROCESS-NAME,tailscale-ipn.exe,DIRECT
   - PROCESS-NAME,Tailscale,DIRECT
@@ -308,6 +304,56 @@ rules:
   - DOMAIN-SUFFIX,ts.net,DIRECT
   - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
   - IP-CIDR6,fd7a:115c:a1e0::/48,DIRECT,no-resolve
+
+  # UU 远程专属放行 (macOS & Windows 进程、STUN 打洞与信令通信)
+  - PROCESS-NAME,UURemote,DIRECT
+  - PROCESS-NAME,UURemoteService,DIRECT
+  - PROCESS-NAME,UURemoteDaemon,DIRECT
+  - PROCESS-NAME,UURemoteServer,DIRECT
+  - PROCESS-NAME,UURemoteHelper,DIRECT
+  - PROCESS-NAME,UURemoteUpdater,DIRECT
+  - PROCESS-NAME,uuyc-cli,DIRECT
+  - PROCESS-NAME,uuyc-mux,DIRECT
+  - PROCESS-NAME,UURemote.exe,DIRECT
+  - PROCESS-NAME,UURemoteService.exe,DIRECT
+  - PROCESS-NAME,UURemoteDaemon.exe,DIRECT
+  - PROCESS-NAME,UURemoteServer.exe,DIRECT
+  - PROCESS-NAME,UURemoteHelper.exe,DIRECT
+  - PROCESS-NAME,UURemoteUpdater.exe,DIRECT
+  - PROCESS-NAME,uuyc-cli.exe,DIRECT
+  - DOMAIN-SUFFIX,uuyc.163.com,DIRECT
+  - DOMAIN-SUFFIX,uuremote.com,DIRECT
+  - DOMAIN-SUFFIX,easebar.com,DIRECT
+  - DOMAIN-KEYWORD,uuremote,DIRECT
+
+  # 绿联 NAS 专属放行 (macOS & Windows 客户端、同步空间、P2P穿透与播放器)
+  - PROCESS-NAME,UGREEN NAS,DIRECT
+  - PROCESS-NAME,UGREEN NAS Helper,DIRECT
+  - PROCESS-NAME,syncspace_pro,DIRECT
+  - PROCESS-NAME,UgAgent,DIRECT
+  - PROCESS-NAME,video-player,DIRECT
+  - PROCESS-NAME,video-player Helper,DIRECT
+  - PROCESS-NAME,UGREEN NAS.exe,DIRECT
+  - PROCESS-NAME,UGREEN NAS Helper.exe,DIRECT
+  - PROCESS-NAME,syncspace_pro.exe,DIRECT
+  - PROCESS-NAME,UgAgent.exe,DIRECT
+  - PROCESS-NAME,video-player.exe,DIRECT
+  - PROCESS-NAME,video-player Helper.exe,DIRECT
+  - PROCESS-NAME,UGREEN Cloud.exe,DIRECT
+  - PROCESS-NAME,uglink.exe,DIRECT
+  - DOMAIN-SUFFIX,ugnas.cloud,DIRECT
+  - DOMAIN-SUFFIX,ugnas.com,DIRECT
+  - DOMAIN-SUFFIX,ugreen.cloud,DIRECT
+  - DOMAIN-SUFFIX,ugreen.com,DIRECT
+  - DOMAIN-SUFFIX,ugreengroup.com,DIRECT
+  - DOMAIN-SUFFIX,uglink.cn,DIRECT
+  - DOMAIN-SUFFIX,peergine.com,DIRECT
+  - DOMAIN-SUFFIX,pptun.com,DIRECT
+  - DOMAIN-KEYWORD,ugreen,DIRECT
+  - DOMAIN-KEYWORD,ugnas,DIRECT
+
+  # 0.2 阻断常规浏览器 QUIC (强制浏览器 fallback 到 TCP)
+  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
 
   # 1. 优先放行特殊流量及局域网直连
   - RULE-SET,applications,DIRECT
@@ -344,5 +390,3 @@ rules:
 
   # 7. 兜底规则: 未命中上述所有规则的流量默认走代理 (白名单模式核心)
   - MATCH,PROXY
-
-
