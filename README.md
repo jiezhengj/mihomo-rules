@@ -34,17 +34,17 @@
 
 | 特性 / 运行环境 | Desktop (桌面) | Android (安卓) | iOS (苹果) | Docker (NAS) |
 | :--- | :--- | :--- | :--- | :--- |
-| **TUN 虚拟网卡** | ✅ 开启 (`mixed` 栈，支持 Tailscale/私网排除) | ✅ 开启 (`gvisor`) | ✅ 开启 (客户端系统接管) | ⚪ 关闭 (仅暴露 7890 端口) |
+| **TUN 虚拟网卡** | ✅ 开启 (`mixed` 栈) | ✅ 开启 (`gvisor`) | ✅ 开启 (客户端系统接管) | ⚪ 关闭 (仅暴露 7890 端口) |
 | **Sniffer (流量嗅探)** | ✅ 开启 | ✅ 开启 | ✅ 开启 | ⚪ 无需开启 |
 | **节点正则过滤 (`exclude-filter`)** | ✅ 支持 (精确剔除无用节点) | ✅ 支持 | ⚠️ 使用先行断言兼容正则 | ✅ 支持 |
 | **协议类型过滤 (`exclude-type`)** | ✅ 支持 (按需筛选协议) | ⚪ 未使用 (可按需添加) | ⚠️ 视客户端而定 | ⚪ 未使用 (可按需添加) |
 | **私有内网 Hosts 解析** | ⚪ 无需 | ⚪ 无需 | ⚪ 无需 | ✅ 配置了 `hosts:` (供局域网解析) |
-| **异地组网/远程桌面直连** | ✅ 内置 Tailscale / UU远程 / 绿联 NAS 放行 | ⚪ 无需 | ⚪ 无需 | ⚪ 无需 |
+| **远程桌面直连** | ✅ 内置 UU远程 进程与打洞放行 | ⚪ 无需 | ⚪ 无需 | ⚪ 无需 |
 
 ## 差异考量详解
 
 1. **iOS 的兼容性考量**：iOS 平台上的客户端生态比较复杂，哪怕是基于 Clash 内核的工具（如 Stash），在实际测试中对 `exclude-filter`（正则）和 `exclude-type` 等高级语法的解析也偶有兼容性问题；而普及率极高的 Shadowrocket（小火箭）更是由于采用自研解析器，对这些语法支持不佳。为了确保模板的绝对稳定与兼容，我们在 iOS 版本中使用兼容性最好的负向先行断言过滤无用节点，退回最稳健的基础策略组模式。
-2. **Desktop 的火力全开与异地组网共存**：桌面端性能充裕且客户端支持完整。我们利用 `exclude-type` 剥离出稳定性要求极高的协议放进 `AUTO_STRICT`（如 Vless/Trojan），把追求速度的协议放进 `AUTO_SPEED`，实现精细化的分层调度。同时，桌面端完整配置了 `route-exclude-address`、`fake-ip-filter` 与多平台进程直连规则，开箱即用支持与 Tailscale、UU远程、绿联私有云 等远程工具在 TUN 模式下无缝共存，兼顾 P2P 打洞穿透与 NAS 极速访问。
+2. **Desktop 的火力全开与低延迟串流**：桌面端性能充裕且客户端支持完整。我们利用 `exclude-type` 剥离出稳定性要求极高的协议放进 `AUTO_STRICT`（如 Vless/Trojan），把追求速度的协议放进 `AUTO_SPEED`，实现精细化的分层调度。同时，桌面端内置了精细的 Fake-IP 过滤与进程级放行规则，支持与 UU远程 等串流工具在 TUN 模式下无缝共存，兼顾 P2P 打洞穿透与低延迟控制。
 3. **Docker 的局域网定位**：既然它在内网做代理服务器，就需要解决内网域名的解析问题。因此只有它启用了 `hosts:` 字段映射（例如 `your-private-domain.com: 192.168.x.x`），并且关闭了破坏宿主机网络的 TUN。
 
 # 三、流量路由逻辑图示 (Mermaid)
@@ -56,7 +56,7 @@
 ```mermaid
 graph TD
     App[应用层流量] --> ProcessMatch{本地特权进程白名单?}
-    ProcessMatch -- Tailscale / UU远程 / 绿联NAS --> ActionDirectProc[DIRECT 直连出站]
+    ProcessMatch -- UU远程等核心进程 --> ActionDirectProc[DIRECT 直连出站]
     ProcessMatch -- 其他应用 --> TUN[TUN 接口接管]
     
     TUN --> QUIC{是否为常规 QUIC / UDP 443 ?}
@@ -98,10 +98,9 @@ graph TD
 
 本配置的灵魂在于**克制且精准的规则分配**：
 
-*   **异地组网与远程控制深度兼容 (Tailscale / UU远程 / 绿联 NAS)**：
-    *   **TUN 路由层精准排除 (`route-exclude-address`)**：将 Tailscale 专用网段（IPv4 `100.64.0.0/10` 与 IPv6 `fd7a:115c:a1e0::/48`）直接从 TUN 虚拟网卡路由中剔除，避免跨网段寻址断连。
-    *   **Fake-IP 免疫过滤 (`fake-ip-filter`)**：将组网及打洞服务域名（`*.ts.net`、`*.tailscale.com`、`+.uuyc.163.com`、`+.ugnas.cloud`、`+.peergine.com` 等）纳入名单，杜绝假 IP 污染，确保 STUN 探测得到公网真实 IP。
-    *   **核心进程直连白名单**：置顶放行 Tailscale、UU远程 与 绿联私有云 的核心通信、后台守护和传输进程，确保 P2P 音视频串流与大文件同步绝不误走代理流量。
+*   **远程桌面与低延迟串流兼容 (以 UU远程 为例)**：
+    *   **Fake-IP 免疫过滤 (`fake-ip-filter`)**：将远程信令与打洞服务域名（如 `+.uuyc.163.com`）纳入直连解析名单，杜绝假 IP 污染，确保 STUN 探测得到真实公网 IP。
+    *   **核心进程直连白名单**：置顶放行客户端与核心传输进程，确保 P2P 音视频串流绝不误走代理流量，杜绝卡顿与流量浪费。
     *   **高性能混合协议栈 (`stack: mixed`)**：在桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），兼顾性能与低开销。
 *   **`RULE-SET,reject,REJECT`**：在路由最前端切断一切已知的广告和隐私追踪，从根源上净化全设备的网络请求。
 *   **国内直连提权 (`direct`, `cncidr`, `GEOSITE,CN`, `GEOIP,CN`)**：置于 CDN 规则之前，确保所有国内日常访问（包括使用部分多线 CDN 的国内网站）绝对优先走 `DIRECT`，防止被后续海外 CDN 规则误判。

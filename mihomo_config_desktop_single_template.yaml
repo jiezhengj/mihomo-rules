@@ -24,9 +24,6 @@ tun:
   stack: mixed
   dns-hijack:
     - any:53
-  route-exclude-address:
-    - 100.64.0.0/10
-    - fd7a:115c:a1e0::/48
 
 sniffer:
   enable: true
@@ -56,23 +53,11 @@ dns:
     - 'localhost.ptlogin2.qq.com'
     - '*.msftncsi.com'
     - 'www.msftconnecttest.com'
-    - '*.ts.net'
-    - '*.tailscale.com'
-    - 'controlplane.tailscale.com'
-    - 'log.tailscale.io'
     # UU 远程与网易调度域 (保障直连与真实 IP 打洞)
     - '+.uuyc.163.com'
     - '+.uuremote.com'
     - '+.nrd.nie.163.com'
     - '+.easebar.com'
-    # 绿联 NAS 调度与穿透域 (保障真实 IP 直连与打洞)
-    - '+.ugnas.cloud'
-    - '+.ugnas.com'
-    - '+.ugreen.cloud'
-    - '+.ugreen.com'
-    - '+.uglink.cn'
-    - '+.peergine.com'
-    - '+.pptun.com'
   nameserver:
     - 223.5.5.5
     - 114.114.114.114
@@ -293,18 +278,7 @@ rule-providers:
 
 # 路由规则 (白名单模式匹配)
 rules:
-  # 0.1 核心穿透与远程桌面进程放行 (置于 QUIC 阻断前，防止 UDP 443 串流被误杀)
-  # Tailscale 专属放行 (保障控制通信与点对点打洞)
-  - PROCESS-NAME,tailscaled.exe,DIRECT
-  - PROCESS-NAME,tailscale-ipn.exe,DIRECT
-  - PROCESS-NAME,Tailscale,DIRECT
-  - PROCESS-NAME,io.tailscale.ipn.macsys.network-extension,DIRECT
-  - PROCESS-NAME,IPNExtension,DIRECT
-  - DOMAIN-SUFFIX,tailscale.com,DIRECT
-  - DOMAIN-SUFFIX,ts.net,DIRECT
-  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
-  - IP-CIDR6,fd7a:115c:a1e0::/48,DIRECT,no-resolve
-
+  # 0.1 远程桌面与核心穿透进程放行 (置于 QUIC 阻断前，防止 UDP 443 串流被误杀)
   # UU 远程专属放行 (macOS & Windows 进程、STUN 打洞与信令通信)
   - PROCESS-NAME,UURemote,DIRECT
   - PROCESS-NAME,UURemoteService,DIRECT
@@ -325,32 +299,6 @@ rules:
   - DOMAIN-SUFFIX,uuremote.com,DIRECT
   - DOMAIN-SUFFIX,easebar.com,DIRECT
   - DOMAIN-KEYWORD,uuremote,DIRECT
-
-  # 绿联 NAS 专属放行 (macOS & Windows 客户端、同步空间、P2P穿透与播放器)
-  - PROCESS-NAME,UGREEN NAS,DIRECT
-  - PROCESS-NAME,UGREEN NAS Helper,DIRECT
-  - PROCESS-NAME,syncspace_pro,DIRECT
-  - PROCESS-NAME,UgAgent,DIRECT
-  - PROCESS-NAME,video-player,DIRECT
-  - PROCESS-NAME,video-player Helper,DIRECT
-  - PROCESS-NAME,UGREEN NAS.exe,DIRECT
-  - PROCESS-NAME,UGREEN NAS Helper.exe,DIRECT
-  - PROCESS-NAME,syncspace_pro.exe,DIRECT
-  - PROCESS-NAME,UgAgent.exe,DIRECT
-  - PROCESS-NAME,video-player.exe,DIRECT
-  - PROCESS-NAME,video-player Helper.exe,DIRECT
-  - PROCESS-NAME,UGREEN Cloud.exe,DIRECT
-  - PROCESS-NAME,uglink.exe,DIRECT
-  - DOMAIN-SUFFIX,ugnas.cloud,DIRECT
-  - DOMAIN-SUFFIX,ugnas.com,DIRECT
-  - DOMAIN-SUFFIX,ugreen.cloud,DIRECT
-  - DOMAIN-SUFFIX,ugreen.com,DIRECT
-  - DOMAIN-SUFFIX,ugreengroup.com,DIRECT
-  - DOMAIN-SUFFIX,uglink.cn,DIRECT
-  - DOMAIN-SUFFIX,peergine.com,DIRECT
-  - DOMAIN-SUFFIX,pptun.com,DIRECT
-  - DOMAIN-KEYWORD,ugreen,DIRECT
-  - DOMAIN-KEYWORD,ugnas,DIRECT
 
   # 0.2 阻断常规浏览器 QUIC (强制浏览器 fallback 到 TCP)
   - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
