@@ -97,8 +97,9 @@ graph TD
 
 *   **高性能混合协议栈 (`stack: mixed`)**：在桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），兼顾性能与低开销。
 *   **`RULE-SET,reject,REJECT`**：在路由最前端切断一切已知的广告和隐私追踪，从根源上净化全设备的网络请求。
-*   **国内直连提权 (`direct`, `cncidr`, `GEOSITE,CN`, `GEOIP,CN`)**：置于 CDN 规则之前，确保所有国内日常访问（包括使用部分多线 CDN 的国内网站）绝对优先走 `DIRECT`，防止被后续海外 CDN 规则误判。
-*   **游戏平台下载直连 (`game_download`, `steamstatic.com`)**：置于 CDN 与代理规则之前，将 Steam、Epic Games、Xbox、EA、暴雪等平台的游戏下载与内容分发切片强制引流至 `DIRECT`，下载跑满本地带宽且不耗费代理流量，同时商店与社区依然正常走代理。
+*   **游戏平台下载直连 (`game_download`, `steamstatic.com`)**：置于 GFW 与代理规则之前，将 Steam、Epic Games、Xbox、EA、暴雪等百 G 级游戏大包下载与分发切片强制引流至 `DIRECT`，下载跑满本地带宽且不耗费代理流量，同时商店与社区依然正常走代理。
+*   **GFW 强阻断前置分流 (`gfw`, `GEOSITE,gfw`)**：置于通用软件大文件下载（`sukka_download_*`）之前。当某个下载源（如 F-Droid、XZ Utils 源码站等）被 GFW 深度封锁时，优先由 `ROUTE_GLOBAL` 接管代理，彻底避免被后方的通用下载直连规则误杀导致连接超时。
+*   **通用软件大文件下载与系统固件直连 (`sukka_download_*`, `system_ota`)**：置于 GFW 规则之后，确保未被封锁的开源软件镜像与系统 OTA 固件更新走 `DIRECT` 跑满物理带宽，防静默偷跑节点流量。
 *   **静态大流量 CDN 规则 (`sukka_cdn_domain`, `sukka_cdn_non_ip`, `cloudflare`)**：引入 Sukka 维护的高精度 CDN 规则集与 Cloudflare IP 段，精准分离 Twitter/X (`twimg.com`)、Reddit (`redd.it`) 等多媒体静态资源。拥有低倍率或大流量节点的用户可直接将这部分流量引流至专用节点，实现“主 API 走优质专线、图片视频走低倍率节点”的动静分离。
 *   **场景化三级容灾分流 (`ROUTE_AI`, `ROUTE_SPEED`, `ROUTE_GLOBAL`)**：全系通用模板的出海规则按业务属性精细化调度：AI 与敏感服务（`sukka_ai`, `google`, `tmdb`）走纯净稳健的 `ROUTE_AI`；即时通讯（`telegram`）走低延迟极速的 `ROUTE_SPEED`；流媒体与多媒体 CDN（`global_media`, `sukka_cdn_*`, `cloudflare`）及通用 GFW 流量走 `ROUTE_GLOBAL`（首选常规/低倍率节点）。各组在底层节点维护时享有自动 fallback 容灾能力，而顶层 `PROXY` 组作为通用白名单兜底（`MATCH`）并提供全局手动干预。
 *   **拦截 QUIC (`AND,((NETWORK,UDP),(DST-PORT,443)),REJECT`)**：很多时候我们看 YouTube 卡顿，并不是节点慢，而是浏览器偷偷使用了基于 UDP 的 QUIC 协议。由于运营商对 UDP 的劣质 QoS 以及部分机场节点 UDP 转发断流，导致体验极差。**拦截它，强迫它降级回稳如老狗的 TCP**，是这套模板最实在的经验之谈。

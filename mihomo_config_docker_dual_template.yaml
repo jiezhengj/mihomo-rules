@@ -381,11 +381,17 @@ rules:
   - GEOSITE,CN,DIRECT
   - GEOIP,CN,DIRECT
 
-  # 4.1 游戏平台与大文件下载直连 (主机与PC游戏下载切片、系统更新，置于前列跑满本地带宽)
+  # 4.1 游戏平台直连 (百G级游戏下载切片优先直连，跑满本地带宽防跑流量)
   - RULE-SET,game_download,DIRECT
+  - DOMAIN-SUFFIX,steamstatic.com,DIRECT
+
+  # 4.2 GFW 强阻断优先代理 (确被封锁的域名优先走代理，防被后方下载规则误杀，如 F-Droid 等)
+  - RULE-SET,gfw,ROUTE_GLOBAL
+  - GEOSITE,gfw,ROUTE_GLOBAL
+
+  # 4.3 软件大文件下载与系统固件直连 (未被 GFW 阻断的镜像与更新切片直连跑满本地带宽)
   - RULE-SET,sukka_download_domain,DIRECT
   - RULE-SET,sukka_download_non_ip,DIRECT
-  - DOMAIN-SUFFIX,steamstatic.com,DIRECT
   - RULE-SET,system_ota,DIRECT
 
   # 5. 静态大流量 / CDN / 流媒体音视频 (走 ROUTE_GLOBAL 策略组，首选常规/低倍率节点并具备容灾 fallback)
@@ -405,8 +411,6 @@ rules:
 
   # 8. 境外常规被阻断站点 (释放至 ROUTE_GLOBAL，优先常规节点并具备容灾)
   - RULE-SET,proxy,ROUTE_GLOBAL
-  - RULE-SET,gfw,ROUTE_GLOBAL
-  - GEOSITE,gfw,ROUTE_GLOBAL
   - RULE-SET,tld-not-cn,PROXY  # 非中国顶级域名走代理
 
   # 9. 兜底规则: 未命中上述所有规则的流量默认走代理 (白名单模式核心)
