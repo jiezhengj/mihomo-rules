@@ -19,12 +19,21 @@ tun:
   dns-hijack:
     - any:53
 
+sniffer:
+  enable: true
+  override-destination: false
+  sniff:
+    tls:
+      ports: [443, 8443]
+    http:
+      ports: [80, 8080-8880]
+  skip-domain:
+    - '*.lan'
+    - '*.local'
+    - '*.arpa'
+
 mode: rule
 log-level: info
-
-# 本地Hosts配置
-hosts:
-  your-private-domain.com: 192.168.x.x
 
 # DNS 配置 (可根据自身需求微调)
 dns:
@@ -66,21 +75,129 @@ proxy-providers:
 proxy-groups:
   - name: PROXY
     type: select
+    proxies:
+      - ROUTE_GLOBAL
+      - ROUTE_AI
+      - ROUTE_SPEED
+      - AUTO_STRICT
+      - AUTO_SPEED
+      - AUTO_GENERAL
     use:
       - sub_nodes
-    proxies:
-      - AUTO
 
-  - name: AUTO
+  - name: ROUTE_AI
+    type: fallback
+    proxies:
+      - AUTO_STRICT
+      - AUTO_SPEED
+      - AUTO_GENERAL
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: ROUTE_SPEED
+    type: fallback
+    proxies:
+      - AUTO_SPEED
+      - AUTO_STRICT
+      - AUTO_GENERAL
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: ROUTE_GLOBAL
+    type: fallback
+    proxies:
+      - AUTO_GENERAL
+      - AUTO_SPEED
+      - AUTO_STRICT
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: AUTO_STRICT
     type: url-test
     use:
       - sub_nodes
+    # 强对抗场景 (VLESS, Trojan, Snell) - 排除其它
+    exclude-type: "Shadowsocks|ShadowsocksR|Vmess|Http|Socks|Socks5|WireGuard|Tuic|Hysteria|Hysteria2"
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: AUTO_SPEED
+    type: url-test
+    use:
+      - sub_nodes
+    # 低延迟加速场景 (SS, SSR, Hysteria/2, TUIC, Wireguard) - 排除其它
+    exclude-type: "Vless|Trojan|Snell|Vmess|Http|Socks|Socks5"
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: AUTO_GENERAL
+    type: url-test
+    use:
+      - sub_nodes
+    # 兜底备用场景 (VMess, HTTP, Socks) - 排除其它
+    exclude-type: "Vless|Trojan|Snell|Shadowsocks|ShadowsocksR|WireGuard|Tuic|Hysteria|Hysteria2"
     url: http://www.gstatic.com/generate_204
     interval: 300
 
 # 规则订阅配置 (Loyalsoldier - 全量引入)
 # interval 单位为秒，86400秒
 rule-providers:
+  game_download:
+    type: http
+    behavior: classical
+    format: yaml
+    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload.yaml"
+    path: ./rule_providers/game_download.yaml
+    interval: 86400
+
+  sukka_download_domain:
+    type: http
+    behavior: domain
+    format: text
+    url: "https://ruleset.skk.moe/Clash/domainset/download.txt"
+    path: ./rule_providers/sukka_download_domain.txt
+    interval: 86400
+
+  sukka_download_non_ip:
+    type: http
+    behavior: classical
+    format: text
+    url: "https://ruleset.skk.moe/Clash/non_ip/download.txt"
+    path: ./rule_providers/sukka_download_non_ip.txt
+    interval: 86400
+
+  system_ota:
+    type: http
+    behavior: classical
+    format: yaml
+    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/SystemOTA/SystemOTA.yaml"
+    path: ./rule_providers/system_ota.yaml
+    interval: 86400
+
+  sukka_ai:
+    type: http
+    behavior: classical
+    format: text
+    url: "https://ruleset.skk.moe/Clash/non_ip/ai.txt"
+    path: ./rule_providers/sukka_ai.txt
+    interval: 86400
+
+  tmdb:
+    type: http
+    behavior: classical
+    format: yaml
+    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Tmdb/Tmdb.yaml"
+    path: ./rule_providers/tmdb.yaml
+    interval: 86400
+
+  global_media:
+    type: http
+    behavior: classical
+    format: yaml
+    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GlobalMedia/GlobalMedia.yaml"
+    path: ./rule_providers/global_media.yaml
+    interval: 86400
+
   sukka_cdn_domain:
     type: http
     behavior: domain
@@ -223,10 +340,9 @@ rules:
   # 2. 拦截广告和恶意域名
   - RULE-SET,reject,REJECT
 
-  # 3. 常见大厂服务直连 / 代理分配
+  # 3. 常见大厂基础服务直连
   - RULE-SET,icloud,DIRECT
   - RULE-SET,apple,DIRECT
-  - RULE-SET,google,PROXY  # Google 通常需要代理
 
   # 4. 国内服务直连名单 (提权至 CDN 之前，确保国内服务绝对直连不误伤)
   - RULE-SET,direct,DIRECT
@@ -234,18 +350,33 @@ rules:
   - GEOSITE,CN,DIRECT
   - GEOIP,CN,DIRECT
 
-  # 5. 静态大流量 / CDN 分流 (统一走 PROXY 策略组调度)
-  - RULE-SET,sukka_cdn_domain,PROXY
-  - RULE-SET,sukka_cdn_non_ip,PROXY
-  - RULE-SET,cloudflare,PROXY
+  # 4.1 游戏平台与大文件下载直连 (主机与PC游戏下载切片、系统更新，置于前列跑满本地带宽)
+  - RULE-SET,game_download,DIRECT
+  - RULE-SET,sukka_download_domain,DIRECT
+  - RULE-SET,sukka_download_non_ip,DIRECT
+  - DOMAIN-SUFFIX,steamstatic.com,DIRECT
+  - RULE-SET,system_ota,DIRECT
 
-  # 6. 匹配 Loyalsoldier 规则中的代理名单 (黑名单触发点)
-  - RULE-SET,proxy,PROXY
-  - RULE-SET,gfw,PROXY
-  - GEOSITE,gfw,PROXY
+  # 5. 静态大流量 / CDN / 流媒体音视频 (走 ROUTE_GLOBAL 策略组，首选常规/低倍率节点并具备容灾 fallback)
+  - RULE-SET,sukka_cdn_domain,ROUTE_GLOBAL
+  - RULE-SET,sukka_cdn_non_ip,ROUTE_GLOBAL
+  - RULE-SET,cloudflare,ROUTE_GLOBAL
+  - RULE-SET,global_media,ROUTE_GLOBAL
+
+  # 6. 敏感高可用业务与 AIGC 生产力 (走纯净稳健节点 ROUTE_AI)
+  - RULE-SET,sukka_ai,ROUTE_AI
+  - RULE-SET,google,ROUTE_AI
+  - RULE-SET,tmdb,ROUTE_AI
+
+  # 7. 低延迟通信与加速业务 (走 ROUTE_SPEED)
+  - RULE-SET,telegramcidr,ROUTE_SPEED
+  - GEOIP,telegram,ROUTE_SPEED
+
+  # 8. 境外常规被阻断站点 (释放至 ROUTE_GLOBAL，优先常规节点并具备容灾)
+  - RULE-SET,proxy,ROUTE_GLOBAL
+  - RULE-SET,gfw,ROUTE_GLOBAL
+  - GEOSITE,gfw,ROUTE_GLOBAL
   - RULE-SET,tld-not-cn,PROXY  # 非中国顶级域名走代理
-  - RULE-SET,telegramcidr,PROXY
-  - GEOIP,telegram,PROXY
 
-  # 7. 兜底规则: 未命中上述所有规则的流量默认走代理 (白名单模式核心)
+  # 9. 兜底规则: 未命中上述所有规则的流量默认走代理 (白名单模式核心)
   - MATCH,PROXY
