@@ -23,10 +23,10 @@
 
 *   **单机场模板 (`*_single_template.yaml`)**：
     *   **极简接入**：`proxy-providers` 仅包含单一 `sub_nodes`，用户只需填入 1 个订阅链接，**无需修改任何策略组语法**即可启动。
-    *   **全系场景化分流**：全部平台均完整配备 `ROUTE_AI`（纯净 AIGC/Google 路由）、`ROUTE_SPEED`（低延迟/Telegram 路由）、`ROUTE_GLOBAL`（常规/低倍率节点路由），并在底层按协议属性自动拆分为 `AUTO_STRICT`（VLESS/Trojan）、`AUTO_SPEED`（SS/Hysteria2）与 `AUTO_GENERAL`。
+    *   **全系场景化分流**：全部平台均完整配备 `ROUTE_AI`（纯净 AIGC/Google 路由）、`ROUTE_GLOBAL`（常规/低倍率节点路由），并在底层按协议属性自动拆分为 `AUTO_STRICT`（聚合 VLESS/Trojan/SS/Hysteria2 等强对抗与低延迟节点）与 `AUTO_GENERAL`（常规与兜底节点）。
 *   **双机场模板 (`*_dual_template.yaml`)**：
     *   **双源容灾**：`proxy-providers` 包含 `sub_nodes_1` 与 `sub_nodes_2`。
-    *   **跨机场测速聚合**：底层各协议原子池（`AUTO_STRICT` / `AUTO_SPEED` / `AUTO_GENERAL`）跨双机场全量聚合优选，自动根据节点协议属性归类并智能 fallback。
+    *   **跨机场测速聚合**：底层各协议原子池（`AUTO_STRICT` / `AUTO_GENERAL`）跨双机场全量聚合优选，自动根据节点协议属性归类并智能 fallback。
     *   **单机场一键逃生**：顶层 `PROXY` 额外提供独立的 `AUTO_1`（机场1优选）与 `AUTO_2`（机场2优选），单机场大面积故障时可在 UI 一键切至备用机场。
 
 # 二、4 类运行环境的横向对比与核心差异
@@ -45,7 +45,7 @@
 1. **iOS 的兼容性考量**：iOS 平台上的客户端生态比较复杂，小火箭等工具对标准正则解析存在细微差异。为了确保模板的绝对稳定与兼容，我们在 iOS 版本中使用兼容性最好的负向先行断言（`filter: "(?i)^(?!.*(香港|HK)).*$"`）过滤无用节点；同时严格剔除大文件下载与影视刮削规则，守住 iOS 15MB Network Extension 内存红线。
 2. **Desktop 的性能与游戏保障**：桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），在保障大文件与高带宽传输性能的同时有效降低系统开销。同时集成 Steam/Epic 等游戏分发切片直连，下游戏跑满千兆带宽。
 3. **Docker 的局域网定位**：Docker 运行在 NAS 或家庭服务器上作为局域网代理服务，关闭了破坏宿主机网络的 TUN。为解决局域网移动端设备通过 HTTP 代理发送纯 IP 请求导致国内 CDN 误判走代理的问题，Docker 版同步启用了 Sniffer 流量嗅探，确保国内流量绝对直连。
-4. **全平台统一的场景化容灾**：全系 8 份模板统一采用 `ROUTE_AI`、`ROUTE_SPEED`、`ROUTE_GLOBAL` 三级容灾策略组，各业务不仅在日常享受最适协议加速，更在底层节点维护时享有自动 fallback 容灾能力，绝不断网。
+4. **全平台统一的场景化容灾**：全系 8 份模板统一采用 `ROUTE_AI`、`ROUTE_GLOBAL` 容灾策略组，各业务不仅在日常享受最适协议加速，更在底层节点维护时享有自动 fallback 容灾能力，绝不断网。
 
 # 三、流量路由逻辑图示 (Mermaid)
 
@@ -68,8 +68,7 @@ graph TD
     
     ActionProxy --> Selector((代理组调度))
     
-    Selector -. 桌面版高级调度 .-> Strict[AUTO_STRICT 稳健节点]
-    Selector -. 桌面版高级调度 .-> Speed[AUTO_SPEED 极速节点]
+    Selector -. 桌面版高级调度 .-> Strict[AUTO_STRICT 纯净与加速节点]
     Selector -. 单机场常规调度 .-> AutoSingle[AUTO 自动测速优选]
     Selector -. 双机场常规调度 .-> AutoDual[AUTO 全局跨机场优选]
 ```
@@ -99,9 +98,9 @@ graph TD
 *   **`RULE-SET,reject,REJECT`**：在路由最前端切断一切已知的广告和隐私追踪，从根源上净化全设备的网络请求。
 *   **游戏平台下载直连 (`game_download`, `steamstatic.com`)**：置于 GFW 与代理规则之前，将 Steam、Epic Games、Xbox、EA、暴雪等百 G 级游戏大包下载与分发切片强制引流至 `DIRECT`，下载跑满本地带宽且不耗费代理流量，同时商店与社区依然正常走代理。
 *   **GFW 强阻断前置分流 (`gfw`, `GEOSITE,gfw`)**：置于通用软件大文件下载（`sukka_download_*`）之前。当某个下载源（如 F-Droid、XZ Utils 源码站等）被 GFW 深度封锁时，优先由 `ROUTE_GLOBAL` 接管代理，彻底避免被后方的通用下载直连规则误杀导致连接超时。
-*   **通用软件大文件下载与系统固件直连 (`sukka_download_*`, `system_ota`)**：置于 GFW 规则之后，确保未被封锁的开源软件镜像与系统 OTA 固件更新走 `DIRECT` 跑满物理带宽，防静默偷跑节点流量。
+*   **通用软件大文件下载切片直连 (`sukka_download_*`)**：置于 GFW 规则之后，确保未被封锁的开源软件镜像走 `DIRECT` 跑满物理带宽，防静默偷跑节点流量。
 *   **静态大流量 CDN 规则 (`sukka_cdn_domain`, `sukka_cdn_non_ip`, `cloudflare`)**：引入 Sukka 维护的高精度 CDN 规则集与 Cloudflare IP 段，精准分离 Twitter/X (`twimg.com`)、Reddit (`redd.it`) 等多媒体静态资源。拥有低倍率或大流量节点的用户可直接将这部分流量引流至专用节点，实现“主 API 走优质专线、图片视频走低倍率节点”的动静分离。
-*   **场景化三级容灾分流 (`ROUTE_AI`, `ROUTE_SPEED`, `ROUTE_GLOBAL`)**：全系通用模板的出海规则按业务属性精细化调度：AI 与敏感服务（`sukka_ai`, `google`, `tmdb`）走纯净稳健的 `ROUTE_AI`；即时通讯（`telegram`）走低延迟极速的 `ROUTE_SPEED`；流媒体与多媒体 CDN（`global_media`, `sukka_cdn_*`, `cloudflare`）及通用 GFW 流量走 `ROUTE_GLOBAL`（首选常规/低倍率节点）。各组在底层节点维护时享有自动 fallback 容灾能力，而顶层 `PROXY` 组作为通用白名单兜底（`MATCH`）并提供全局手动干预。
+*   **场景化容灾分流 (`ROUTE_AI`, `ROUTE_GLOBAL`)**：全系通用模板的出海规则按业务属性精细化调度：AI 与敏感生产力服务（`sukka_ai`, `google`, `tmdb`）走纯净稳健的 `ROUTE_AI`；流媒体与多媒体 CDN（`global_media`, `sukka_cdn_*`, `cloudflare`）及通用 GFW 流量走 `ROUTE_GLOBAL`（首选常规/低倍率节点）。各组在底层节点维护时享有自动 fallback 容灾能力，而顶层 `PROXY` 组作为通用白名单兜底（`MATCH`）并提供全局手动干预。
 *   **拦截 QUIC (`AND,((NETWORK,UDP),(DST-PORT,443)),REJECT`)**：很多时候我们看 YouTube 卡顿，并不是节点慢，而是浏览器偷偷使用了基于 UDP 的 QUIC 协议。由于运营商对 UDP 的劣质 QoS 以及部分机场节点 UDP 转发断流，导致体验极差。**拦截它，强迫它降级回稳如老狗的 TCP**，是这套模板最实在的经验之谈。
 
 # 五、致谢：远程规则集的来源
@@ -110,7 +109,7 @@ graph TD
 
 *   **[Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules)**：贡献了本配置 90% 以上的基础规则底座（涵盖 gfw, cn, reject, proxy, direct 等）。
 *   **[Sukka's Ruleset](https://ruleset.skk.moe)** / **[SukkaW/Surge](https://github.com/SukkaW/Surge)**：贡献了高精度的公共与海外静态资源 CDN 规则集、通用大文件与安装包下载规则集（Download）以及高精度 AIGC 生产力规则集（AI），实现多媒体静态资源与生产力业务的精细化分流。
-*   **[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**：提供了 Cloudflare IP 段集合、主机与 PC 游戏下载分流规则集（GameDownload）、全平台海外流媒体音视频规则集（GlobalMedia）、系统固件更新规则集（SystemOTA）以及家庭影院海报刮削规则集（Tmdb）。
+*   **[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**：提供了 Cloudflare IP 段集合、主机与 PC 游戏下载分流规则集（GameDownload）、全平台海外流媒体音视频规则集（GlobalMedia）以及家庭影院海报刮削规则集（Tmdb）。
 
 # 六、致 AI Agent (AI 智能体) 的食用指南
 
