@@ -6,3 +6,7 @@ mihomo_config_ios_temp.yaml
 mihomo_config_docker_temp.yaml
 mihomo_config_android_temp.yaml
 LOCAL_ARCH_DESIGN.md
+
+# SPEC-KIT-GOVERNANCE-RUNTIME:START
+/.spec-kit-governance/
+# SPEC-KIT-GOVERNANCE-RUNTIME:END
