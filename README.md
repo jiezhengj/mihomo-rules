@@ -46,6 +46,8 @@
 
 各平台差异只动平台设置与资源裁剪，**分流判定链四平台一致**。
 
+Docker 的管理接口不设 CORS 白名单——白名单会挡住自建面板（如 NAS 上的 metacubexd），面板会报「检测不到后端」而后端其实正常（API 返回 200）。代价是任何网页都能调用该 API，且当前未设 `secret`，局域网内设备可直接改路由；需要鉴权请填入配置中注释掉的 `secret: YOUR_CONTROLLER_SECRET`。
+
 ## 差异考量详解
 
 1. **iOS 按 Stash 适配**：iOS 平台客户端生态复杂，Stash 的规则集格式是 `payload:` YAML 而非 Mihomo 专有 `.mrs`，故三份 iOS 配置的 provider URL 全部换用 `.yaml`（同一 commit、同一数据）。同时去掉 `sniffer` 与 `tun` 块、把 QUIC 逻辑规则注释保留（`AND,…` 是否被 Stash 支持未证实）。节点过滤改用负向先行断言，与查官方文档得到的写法一致。

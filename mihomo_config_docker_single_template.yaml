@@ -14,12 +14,7 @@ allow-lan: true
 #       局域网内任意设备均可调用该 API 修改路由。启用面板鉴权请填入下面的 secret。
 external-controller: 0.0.0.0:9090
 # secret: YOUR_CONTROLLER_SECRET
-external-controller-cors:
-  allow-private-network: true
-  allow-origins:
-    - https://yacd.metacubex.one
-    - https://metacubex.github.io
-    - https://board.zash.run.place
+
 unified-delay: true
 mode: rule
 

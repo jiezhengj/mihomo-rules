@@ -11,12 +11,7 @@
 mixed-port: 7890
 allow-lan: false
 external-controller: 127.0.0.1:9090
-external-controller-cors:
-  allow-private-network: true
-  allow-origins:
-    - https://yacd.metacubex.one
-    - https://metacubex.github.io
-    - https://board.zash.run.place
+
 unified-delay: true
 mode: rule
 
