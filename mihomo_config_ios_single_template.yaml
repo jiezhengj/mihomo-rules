@@ -61,7 +61,7 @@ proxy-groups:
 
   # 节点池，自动选优。业务规则直接指向它。
   # 模板只有一个池，故不设 AUTO / AUTO 中间层——两个都指向同一池是冗余。
-  # 若订阅有大流量节点池（如 YOUR_HEAVY_KEYWORD），参照个人配置拆成 AUTO_STRICT / AUTO_GENERAL，
+  # 若订阅有大流量节点池（按节点名识别），参照个人配置拆成 AUTO_STRICT / AUTO_GENERAL，
   # 再把规则改指 AUTO / AUTO。
   - name: AUTO
     type: url-test
@@ -209,7 +209,7 @@ rules:
   - RULE-SET,ai_chat,AUTO
   - RULE-SET,google,AUTO
 
-  # 7) 需翻墙 + 大流量 -> AUTO（首选 YOUR_HEAVY_KEYWORD）
+  # 7) 需翻墙 + 大流量 -> AUTO
   - RULE-SET,media,AUTO
   - RULE-SET,social_media_nc,AUTO
   - RULE-SET,netdisk_nc,AUTO
