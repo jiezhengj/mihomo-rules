@@ -1,57 +1,136 @@
 创建这个仓库的初衷非常简单：在日常折腾网络的过程中，我厌倦了以下痛点：
+
 1. **不想依赖特定机场的分流规则**：很多机场自带的规则极其臃肿或常年失修。
 2. **不想换机场就换规则**：每次更换服务商，都要重新习惯一套新的路由逻辑，成本太高。
 3. **多机场混合使用困难**：市面上极少有开箱即用的、能完美将多个机场节点混合测速并智能调度的配置。
 4. **想要一套简洁且合理的策略**：通过不断地实践与摸索，总结出了一套在实际体验中稳定、高效的代理组策略。
 
-这并不是什么庞大复杂的工程，而是我个人实践出的一套**“白名单模式 + 智能兜底”**的配置模板集合。
+这并不是什么庞大复杂的工程，而是我个人实践出的一套**「白名单模式 + 智能兜底」**的配置模板集合。
 
-为了兼顾不同用户的机场订阅情况，仓库提供 **8 份配置模板**（4 种设备环境 × 单机场 / 双机场）。
+为兼顾不同用户的机场订阅情况，仓库提供 **8 份配置模板**（4 种设备环境 × 单机场 / 双机场）。设计依据与逐项数据见 [rule-design.md](rule-design.md)，实测记录见 [validation.md](validation.md)。
 
 # 一、配置适用设备与版本矩阵
 
-请根据您的**运行设备**与**持有的机场订阅数量**选择对应的模板：
+请根据**运行设备**与**持有的机场订阅数量**选择对应模板：
 
-| 运行环境 | 单机场模板 (仅1个订阅链接) | 双机场模板 (2个订阅冗余/容灾) | 适用客户端与说明 |
+| 运行环境 | 单机场模板（1 个订阅链接） | 双机场模板（2 个订阅冗余/容灾） | 适用客户端与说明 |
 | :--- | :--- | :--- | :--- |
 | 💻 **桌面版 (Desktop)** | `mihomo_config_desktop_single_template.yaml` | `mihomo_config_desktop_dual_template.yaml` | Windows / macOS / Linux。适配 Clash Verge Rev、Mihomo Party 等完整内核客户端。 |
-| 🤖 **安卓版 (Android)** | `mihomo_config_android_single_template.yaml` | `mihomo_config_android_dual_template.yaml` | Android 手机/平板。适配 Clash for Android (CFA)、Surfboard、FlClash 等。 |
-| 🍏 **iOS 版 (iOS)** | `mihomo_config_ios_single_template.yaml` | `mihomo_config_ios_dual_template.yaml` | iPhone / iPad。适配 Shadowrocket (小火箭)、Stash、Quantumult X 等。 |
-| 🐳 **Docker/NAS 版** | `mihomo_config_docker_single_template.yaml` | `mihomo_config_docker_dual_template.yaml` | NAS (群晖/极空间) 或 Linux 服务器。不开 TUN，局域网暴露端口供其他设备连接。 |
+| 🤖 **安卓版 (Android)** | `mihomo_config_android_single_template.yaml` | `mihomo_config_android_dual_template.yaml` | Android 手机/平板。适配 Clash for Android、Surfboard、FlClash 等。 |
+| 🍏 **iOS 版 (iOS)** | `mihomo_config_ios_single_template.yaml` | `mihomo_config_ios_dual_template.yaml` | iPhone / iPad。**iOS 上没有成熟的 Mihomo 客户端，实际普遍用 Stash 或 Shadowrocket；本仓库按 Stash 适配**，详见下文第六节。 |
+| 🐳 **Docker/NAS 版** | `mihomo_config_docker_single_template.yaml` | `mihomo_config_docker_dual_template.yaml` | NAS（群晖/极空间）或 Linux 服务器。不开 TUN，局域网暴露端口供其他设备连接。 |
 
 ## 单机场与双机场版本的架构差异
 
-*   **单机场模板 (`*_single_template.yaml`)**：
-    *   **极简接入**：`proxy-providers` 仅包含单一 `sub_nodes`，用户只需填入 1 个订阅链接，**无需修改任何策略组语法**即可启动。
-    *   **全系场景化分流**：全部平台均完整配备 `ROUTE_AI`（纯净 AIGC/Google 路由）、`ROUTE_GLOBAL`（常规/低倍率节点路由），并在底层按协议属性自动拆分为 `AUTO_STRICT`（聚合 VLESS/Trojan/SS/Hysteria2 等强对抗与低延迟节点）与 `AUTO_GENERAL`（常规与兜底节点）。
-*   **双机场模板 (`*_dual_template.yaml`)**：
-    *   **双源容灾**：`proxy-providers` 包含 `sub_nodes_1` 与 `sub_nodes_2`。
-    *   **跨机场测速聚合**：底层各协议原子池（`AUTO_STRICT` / `AUTO_GENERAL`）跨双机场全量聚合优选，自动根据节点协议属性归类并智能 fallback。
+*   **单机场模板（`*_single_template.yaml`）**：
+    *   **极简接入**：`proxy-providers` 仅含单一 `sub_nodes`，填入 1 个订阅链接即可启动，无需改策略组语法。
+    *   **两个组各司其职**：`AUTO` 是自动选优的节点池，业务规则直接指向它；`PROXY` 是手动逃生口兼最终兜底。
+*   **双机场模板（`*_dual_template.yaml`）**：
+    *   **双源容灾**：`proxy-providers` 含 `sub_nodes_1` 与 `sub_nodes_2`。
+    *   **跨机场测速聚合**：`AUTO` 跨双机场全量聚合优选。
     *   **单机场一键逃生**：顶层 `PROXY` 额外提供独立的 `AUTO_1`（机场1优选）与 `AUTO_2`（机场2优选），单机场大面积故障时可在 UI 一键切至备用机场。
 
 # 二、4 类运行环境的横向对比与核心差异
 
-| 特性 / 运行环境 | Desktop (桌面) | Android (安卓) | iOS (苹果) | Docker (NAS) |
+| 特性 / 运行环境 | Desktop（桌面） | Android（安卓） | iOS（苹果） | Docker（NAS） |
 | :--- | :--- | :--- | :--- | :--- |
-| **TUN 虚拟网卡** | ✅ 开启 (`mixed` 栈) | ✅ 开启 (`gvisor`) | ✅ 开启 (客户端系统接管) | ⚪ 关闭 (仅暴露 7890 端口) |
-| **Sniffer (流量嗅探)** | ✅ 开启 | ✅ 开启 | ✅ 开启 | ✅ 开启 (嗅探 SNI 防止局域网 App 纯 IP 误判) |
-| **节点正则过滤 (`exclude-filter`)** | ✅ 支持 (精确剔除无用节点) | ✅ 支持 | ⚠️ 使用先行断言兼容正则 | ✅ 支持 |
-| **协议分类与容灾调度 (`ROUTE_XXX`)**| ✅ 全系对齐支持 | ✅ 全系对齐支持 | ✅ 全系对齐支持 | ✅ 全系对齐支持 |
-| **大文件与游戏下载切片 (`DIRECT`)** | ✅ 包含 (Steam/Epic等) | ⚪ 剔除 (防内存溢出) | ⚪ 剔除 (防 15MB 内存溢出) | ✅ 包含 (主机/PC分发加速) |
-| **家庭影院刮削 (`ROUTE_AI`)** | ✅ 包含 (`tmdb`) | ⚪ 剔除 (无刮削场景) | ⚪ 剔除 (无刮削场景) | ✅ 包含 (`tmdb` 海报秒出) |
+| **TUN 虚拟网卡** | ✅ 开启（`mixed` 栈） | ✅ 开启（`gvisor`） | ⚪ 由 Stash 的 VPN profile 接管 | ⚪ 关闭（仅暴露 7890 端口） |
+| **Sniffer（流量嗅探）** | ✅ 开启 | ✅ 开启 | ⚪ 不使用，Stash 自行识别 | ✅ 开启（嗅探 SNI 防局域网 App 纯 IP 误判） |
+| **规则集格式** | `.mrs`（Mihomo 编译格式） | `.mrs` | **`.yaml` payload**（Stash 不认 `.mrs`） | `.mrs` |
+| **QUIC 阻断（`AND,…` 逻辑规则）** | ✅ 启用 | ✅ 启用 | ⚠️ 注释保留，待实测 | ✅ 启用 |
+| **游戏下载直连** | ✅ 包含 | ⚪ 剔除 | ⚪ 剔除 | ✅ 包含 |
+| **Windows 更新直连（`win_update`）** | ✅ 包含 | ⚪ 剔除 | ⚪ 剔除 | ✅ 包含 |
+| **CDN 边缘 IP 层（1033 条 CIDR）** | ✅ 包含 | ✅ 包含 | ⚪ 剔除（守 15MB 内存红线） | ✅ 包含 |
+| **节点正则过滤** | ✅ 支持 | ✅ 支持 | ✅ 负向先行断言（兼容 iOS 正则） | ✅ 支持 |
+| **外部管理接口** | `127.0.0.1:9090` | 不启用 | 不启用 | `0.0.0.0:9090`（供局域网面板） |
+
+各平台差异只动平台设置与资源裁剪，**分流判定链四平台一致**。
 
 ## 差异考量详解
 
-1. **iOS 的兼容性考量**：iOS 平台上的客户端生态比较复杂，小火箭等工具对标准正则解析存在细微差异。为了确保模板的绝对稳定与兼容，我们在 iOS 版本中使用兼容性最好的负向先行断言（`filter: "(?i)^(?!.*(香港|HK)).*$"`）过滤无用节点；同时严格剔除大文件下载与影视刮削规则，守住 iOS 15MB Network Extension 内存红线。
-2. **Desktop 的性能与游戏保障**：桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），在保障大文件与高带宽传输性能的同时有效降低系统开销。同时集成 Steam/Epic 等游戏分发切片直连，下游戏跑满千兆带宽。
-3. **Docker 的局域网定位**：Docker 运行在 NAS 或家庭服务器上作为局域网代理服务，关闭了破坏宿主机网络的 TUN。为解决局域网移动端设备通过 HTTP 代理发送纯 IP 请求导致国内 CDN 误判走代理的问题，Docker 版同步启用了 Sniffer 流量嗅探，确保国内流量绝对直连。
-4. **全平台统一的场景化容灾**：全系 8 份模板统一采用 `ROUTE_AI`、`ROUTE_GLOBAL` 容灾策略组，各业务不仅在日常享受最适协议加速，更在底层节点维护时享有自动 fallback 容灾能力，绝不断网。
+1. **iOS 按 Stash 适配**：iOS 平台客户端生态复杂，Stash 的规则集格式是 `payload:` YAML 而非 Mihomo 专有 `.mrs`，故三份 iOS 配置的 provider URL 全部换用 `.yaml`（同一 commit、同一数据）。同时去掉 `sniffer` 与 `tun` 块、把 QUIC 逻辑规则注释保留（`AND,…` 是否被 Stash 支持未证实）。节点过滤改用负向先行断言，与查官方文档得到的写法一致。
+2. **移动端内存壁垒**：iOS Network Extension 有 15MB Jetsam 内存红线，规则膨胀会触发后台静默崩溃。手机端不存在主机游戏下载等重型场景，故移动端统一剔除 `game_download`、`epic_platform`、`win_update`，iOS 另剔除 CDN IP 层。
+3. **Desktop 的性能与游戏保障**：桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），保障大文件高带宽传输同时降低系统开销；集成游戏分发切片直连，下载跑满本地带宽且不耗代理流量。
+4. **Docker 的局域网定位**：Docker 运行在 NAS 或家庭服务器，关闭了破坏宿主机网络的 TUN。为解决局域网设备发纯 IP 请求导致国内 CDN 误判走代理的问题，同步启用 Sniffer 嗅探重建主机名，`override-destination` 设为 `true`。
+5. **明确不做的裁剪**：不引入测速规则（用户无测速习惯，只增加维护开销与内存占用）、不引入 PT Tracker 拦截（NAS 本身不做种，且真要做种的设备也不经过本代理）。
 
-# 三、流量路由逻辑图示 (Mermaid)
+# 三、分流判定链
 
-## 1. 客户端模式路由图 (Desktop / Android / iOS)
+四平台一致，自上而下**首匹配**：
 
-客户端模式下，流量直接被 TUN 劫持。
+1. **应当拦截吗？是 → `REJECT`**（广告/追踪）
+2. **需翻墙？否 → `DIRECT`**。**不应翻墙的绝不翻墙。**
+3. **需翻墙 + 普通流量 → `ROUTE_NORMAL`**（交互型、非大流量）
+4. **需翻墙 + 大流量 → `ROUTE_HEAVY`**（持续大载荷）
+5. 其余 → `MATCH,PROXY` 兜底
+
+准入判据是**同质性**：同质性不通过的一律不进。`DIRECT`↔`ROUTE_*` 搞错是**硬故障**，门槛严格；`ROUTE_NORMAL`↔`ROUTE_HEAVY` 搞错是**软故障**，按宿主内容类型判，门槛放宽。
+
+注意「规则集」是宽泛说法——实际取用的是 geo/geosite、geoip、categories 等各形态中**覆盖最全且同质**的那一个，不是只看规则集形态。完整的资源取舍与交叠数据见 [rule-design.md](rule-design.md)。
+
+# 四、规则顺序（22 个规则资源）
+
+```
+ 1. category_ads_all                  -> REJECT
+ 2. private_domain                    -> DIRECT
+ 3. private_ip                        -> DIRECT   (no-resolve)
+ 4. geo_cn_ip                         -> DIRECT   (no-resolve)
+    ── 个人例外（Tailscale / UU 远程 / 绿联 NAS）-> DIRECT ──
+ 5. QUIC: UDP 且目标端口 443          -> REJECT
+ 6. gfw                               -> ROUTE_NORMAL
+ 7. cn                                -> DIRECT
+ 8. ai_chat                           -> ROUTE_NORMAL
+ 9. google                            -> ROUTE_NORMAL
+10. media                             -> ROUTE_HEAVY
+    social_media_nc                   -> ROUTE_HEAVY
+    netdisk_nc                        -> ROUTE_HEAVY
+11. game_download                     -> DIRECT
+12. epic_platform                     -> DIRECT      （仅 Desktop / Docker）
+13. apple / microsoft                 -> DIRECT
+    win_update                        -> DIRECT      （仅 Desktop / Docker）
+14. cdn_nc / cdn_akamai / cdn_fastly  -> ROUTE_HEAVY
+    cdn_ip_{cloudflare,cloudfront,fastly} -> ROUTE_HEAVY (no-resolve)
+15. MATCH,PROXY                       -> 兜底
+```
+
+规则顺序不是随手排的，几处关键取舍：
+
+*   **`cn` 在 `gfw` 之后、大流量层之前**：`gfw` 有 22 条受限站点被 `cn` 覆盖（`futu.cn`、`longbridge.cn`、`google.cn`、`bloomberg.cn` 等），必须先由 `gfw` 捞走；而大流量层有 59 条境内服务被 `cn` 覆盖，必须先由 `cn` 直连。
+*   **QUIC 阻断排在个人例外之后**：拦截 QUIC 强迫浏览器降级 TCP。很多时候看视频卡顿并不是节点慢，而是浏览器偷偷用了基于 UDP 的 QUIC——运营商对 UDP 的劣质 QoS 以及部分节点的 UDP 转发断流才是真凶。放个人例外之后是为了让 Tailscale 的 UDP 打洞不被误杀。
+*   **游戏下载在 `gfw` 之后、CDN 之前**：集合里的共享 CDN 边缘主机需代理，让 `gfw` 先命中；而 CDN 集合会吞掉其 10 个成员，所以 CDN 层必须在其后。
+*   **`win_update` 必须单列**：`microsoft` 只覆盖 `win-update` 的 358/364 条，余 6 条挂在共享 CDN 边缘域名下会被推去代理。移动端不引入。
+*   **CDN 层在 `gfw` 之后**：代价是 6 个 CDN 边缘主机落 `ROUTE_NORMAL`，属已知软故障。
+
+> **一处顺序无法解决的三方牵制**：`gfw`、`cn`、三层大流量集合构成环，任何线性排列都必须放弃一条。当前采用唯一「零打不开、零境内走代理」的排列，代价是 70 条大流量落 `ROUTE_NORMAL`。完整推演与三种取舍的代价见 [rule-design.md](rule-design.md)「顺序无法彻底解决的三方牵制」，待实测后裁定。
+
+# 五、策略组
+
+| 组 | 类型 | 候选 | 出现于 | 含义 |
+|---|---|---|---|---|
+| `AUTO` | url-test | 全部节点，不区分 | 仅公开模板 | 节点池，自动选优。业务规则直接指向它 |
+| `ROUTE_NORMAL` | fallback | `AUTO_STRICT → AUTO_GENERAL → AUTO_BACKUP` | 仅个人配置 | 普通流量：交互型、非大流量 |
+| `ROUTE_HEAVY` | fallback | `AUTO_GENERAL → AUTO_STRICT → AUTO_BACKUP` | 仅个人配置 | 大流量：持续大载荷 |
+| `AUTO_STRICT` | url-test | **仅机场 A**，排除 YOUR_HEAVY_KEYWORD | 仅个人配置 | 机场 A 干净节点 |
+| `AUTO_GENERAL` | url-test | **仅机场 A**，只要 YOUR_HEAVY_KEYWORD | 仅个人配置 | 机场 A 大流量节点 |
+| `AUTO_BACKUP` | url-test | **仅机场 B**，不分池 | 仅个人配置 | 机场 B 整体作末位逃生 |
+| `AUTO_1` / `AUTO_2` | url-test | 各引用一份订阅 | 仅双机场公开模板 | 独立逃生入口 |
+| `PROXY` | select | 节点池 + 逃生口 | 全部 | 手动逃生口与最终兜底 |
+
+三个节点池**互斥**：机场 A 的节点按 `YOUR_HEAVY_KEYWORD` 分进 `AUTO_STRICT` / `AUTO_GENERAL`，机场 B 的节点只进 `AUTO_BACKUP`。`AUTO_BACKUP` 因此是真正独立的逃生池，`ROUTE_*` 的三级链前两级走机场 A、兜不住才切机场 B。`YOUR_HEAVY_KEYWORD` 是机场 A 订阅下的一个节点名，用来识别其内部的大流量节点。
+
+**模板没有 ROUTE 层**：模板只有一个节点池，普通流量与大流量落到同一组，再包一层 `ROUTE_NORMAL` / `ROUTE_HEAVY` 只是纯转发。所以模板的业务规则直接指向 `AUTO`，两个组各司其职。个人配置才需要 `ROUTE_*`——那里是两个真实的池，两条链的首选顺序不同。
+
+`AUTO_1` / `AUTO_2` 的切换入口按平台不同：Desktop 与 Docker 启用了 `external-controller`（Desktop 绑 `127.0.0.1:9090`、Docker 绑 `0.0.0.0:9090`），可用 yacd 之类的 Web 面板切换；iOS / Android 不启用控制器，由客户端 App 自带的策略组 UI 切换。
+
+## 命名由来
+
+早期配置把节点按适用场景分为纯净 / 普通 / 大流量三组，`ROUTE_AI` 最初只针对 AI 业务、`ROUTE_GLOBAL` 表达走全球节点；合并后语义与名字脱节，故更名为 `ROUTE_NORMAL` / `ROUTE_HEAVY`，直接编码判定链的分类轴。
+
+# 六、路由逻辑图（Mermaid）
+
+## 1. 客户端模式路由图（Desktop / Android / iOS）
+
+客户端模式下，流量被 TUN 劫持。
 
 ```mermaid
 graph TD
@@ -60,74 +139,101 @@ graph TD
     QUIC -- 是 (拦截) --> RejectQuic[强制 REJECT <br> 促使浏览器降级 TCP]
     QUIC -- 否 --> Sniff[Sniffer 嗅探真实域名]
     Sniff --> Match{路由规则匹配}
-    
-    Match -- 广告追踪/恶意域名 --> ActionReject[REJECT 丢弃]
-    Match -- GeoIP CN / 常用国内域 --> ActionDirect[DIRECT 直连]
-    Match -- Sukka CDN / Cloudflare IP --> ActionProxy[送入代理组 / 大流量节点]
+
+    Match -- 广告追踪 --> ActionReject[REJECT 丢弃]
+    Match -- 境内域名 / 境内 IP --> ActionDirect[DIRECT 直连]
+    Match -- 受限域名 --> ActionRoute[ROUTE_NORMAL / ROUTE_HEAVY]
     Match -- 兜底规则 (MATCH) --> ActionProxy
-    
-    ActionProxy --> Selector((代理组调度))
-    
-    Selector -. 桌面版高级调度 .-> Strict[AUTO_STRICT 纯净与加速节点]
-    Selector -. 单机场常规调度 .-> AutoSingle[AUTO 自动测速优选]
-    Selector -. 双机场常规调度 .-> AutoDual[AUTO 全局跨机场优选]
+
+    ActionRoute --> Selector((策略组调度))
+    Selector -. 普通流量 .-> Strict[AUTO_STRICT 干净节点]
+    Selector -. 大流量 .-> General[AUTO_GENERAL 大流量节点]
+    ActionProxy --> Manual[PROXY 手动选择]
 ```
 
-## 2. 局域网代理模式路由图 (Docker / NAS)
+## 2. 局域网代理模式路由图（Docker / NAS）
 
 Docker 版不接管底层网卡，只被动接收代理请求。
 
 ```mermaid
 graph TD
     LAN[局域网设备] -- 配置 HTTP/SOCKS 代理 --> Port[Docker 暴露端口 7890]
-    Port --> Hosts{是否命中 Hosts 映射?}
-    
-    Hosts -- 是 --> ReturnLAN[解析为内网 IP <br> 如 192.168.x.x]
-    Hosts -- 否 --> Match{路由规则匹配}
-    
+    Port --> Sniff[Sniffer 嗅探 SNI 重建主机名]
+
+    Sniff --> Match{路由规则匹配}
+
     Match -- 广告追踪 --> ActionReject[REJECT 丢弃]
-    Match -- 国内流量 --> ActionDirect[DIRECT 出口直连]
-    Match -- 国外流量/未匹配 --> ActionProxy((AUTO 测速优选组))
+    Match -- 境内流量 --> ActionDirect[DIRECT 出口直连]
+    Match -- 受限流量/未匹配 --> ActionProxy((PROXY / 节点池))
 ```
 
-# 四、为什么这样写规则？(策略原理解析)
+# 七、iOS 与节点过滤
 
-本配置的灵魂在于**克制且精准的规则分配**：
+iOS 目标客户端是 **Stash**，不是 Mihomo。它与 Mihomo 在几处不兼容，iOS 三份配置已相应调整：
 
-*   **高性能混合协议栈 (`stack: mixed`)**：在桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），兼顾性能与低开销。
-*   **`RULE-SET,reject,REJECT`**：在路由最前端切断一切已知的广告和隐私追踪，从根源上净化全设备的网络请求。
-*   **游戏平台下载直连 (`game_download`, `steamstatic.com`)**：置于 GFW 与代理规则之前，将 Steam、Epic Games、Xbox、EA、暴雪等百 G 级游戏大包下载与分发切片强制引流至 `DIRECT`，下载跑满本地带宽且不耗费代理流量，同时商店与社区依然正常走代理。
-*   **GFW 强阻断前置分流 (`gfw`, `GEOSITE,gfw`)**：置于通用软件大文件下载（`sukka_download_*`）之前。当某个下载源（如 F-Droid、XZ Utils 源码站等）被 GFW 深度封锁时，优先由 `ROUTE_GLOBAL` 接管代理，彻底避免被后方的通用下载直连规则误杀导致连接超时。
-*   **通用软件大文件下载切片直连 (`sukka_download_*`)**：置于 GFW 规则之后，确保未被封锁的开源软件镜像走 `DIRECT` 跑满物理带宽，防静默偷跑节点流量。
-*   **静态大流量 CDN 规则 (`sukka_cdn_domain`, `sukka_cdn_non_ip`, `cloudflare`)**：引入 Sukka 维护的高精度 CDN 规则集与 Cloudflare IP 段，精准分离 Twitter/X (`twimg.com`)、Reddit (`redd.it`) 等多媒体静态资源。拥有低倍率或大流量节点的用户可直接将这部分流量引流至专用节点，实现“主 API 走优质专线、图片视频走低倍率节点”的动静分离。
-*   **场景化容灾分流 (`ROUTE_AI`, `ROUTE_GLOBAL`)**：全系通用模板的出海规则按业务属性精细化调度：AI 与敏感生产力服务（`sukka_ai`, `google`, `tmdb`）走纯净稳健的 `ROUTE_AI`；流媒体与多媒体 CDN（`global_media`, `sukka_cdn_*`, `cloudflare`）及通用 GFW 流量走 `ROUTE_GLOBAL`（首选常规/低倍率节点）。各组在底层节点维护时享有自动 fallback 容灾能力，而顶层 `PROXY` 组作为通用白名单兜底（`MATCH`）并提供全局手动干预。
-*   **拦截 QUIC (`AND,((NETWORK,UDP),(DST-PORT,443)),REJECT`)**：很多时候我们看 YouTube 卡顿，并不是节点慢，而是浏览器偷偷使用了基于 UDP 的 QUIC 协议。由于运营商对 UDP 的劣质 QoS 以及部分机场节点 UDP 转发断流，导致体验极差。**拦截它，强迫它降级回稳如老狗的 TCP**，是这套模板最实在的经验之谈。
+| 项 | 其它平台（Mihomo） | iOS（Stash） |
+|---|---|---|
+| 规则集格式 | `format: mrs`（Mihomo 专有二进制） | **`payload:` YAML**，URL 用 `.yaml` |
+| `sniffer` 块 | 有 | **无**，Stash 自行识别 TLS/HTTP |
+| `tun` 块 | 有 | **无**，Stash 由 app 的 VPN profile 管理 |
+| QUIC 阻断 `AND,(…)` | 启用 | **注释保留**，Stash 支持与否未证实 |
 
-# 五、致谢：远程规则集的来源
+节点过滤只针对个人配置的机场 B 订阅：BACKUP_SUB 有假节点、香港节点不好用，故用 `exclude-filter` 剔除（iOS 平台改用负向先行断言以兼容正则）；过滤词为 `香港|HK|HongKong|Hong Kong|过滤|剩余|套餐`。机场 A 订阅无此问题，**不过滤**；公开模板不做任何订阅假设。
 
-不造轮子，本配置的所有智能分流大脑，皆来自开源社区每日辛勤维护的规则集：
+# 八、个人例外
 
-*   **[Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules)**：贡献了本配置 90% 以上的基础规则底座（涵盖 gfw, cn, reject, proxy, direct 等）。
-*   **[Sukka's Ruleset](https://ruleset.skk.moe)** / **[SukkaW/Surge](https://github.com/SukkaW/Surge)**：贡献了高精度的公共与海外静态资源 CDN 规则集、通用大文件与安装包下载规则集（Download）以及高精度 AIGC 生产力规则集（AI），实现多媒体静态资源与生产力业务的精细化分流。
-*   **[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**：提供了 Cloudflare IP 段集合、主机与 PC 游戏下载分流规则集（GameDownload）、全平台海外流媒体音视频规则集（GlobalMedia）以及家庭影院海报刮削规则集（Tmdb）。
+仅 Desktop 个人配置插入 48 条个人例外，位置在 `geo_cn_ip` 之后、任何代理规则之前（归属 `DIRECT`）：
 
-# 六、致 AI Agent (AI 智能体) 的食用指南
+| 例外组 | 用途 | 平台 |
+|---|---|---|
+| Tailscale | 零配置内网组网与远程访问 | 仅 Desktop 个人 |
+| UU 远程 | 远程桌面与串流 | 仅 Desktop 个人 |
+| 绿联 NAS | 私有网络存储 | 仅 Desktop 个人 |
 
-如果你是一个 AI Agent（且具备代码/文件编辑能力，正在协助人类用户），人类用户可能会要求你：“帮我把我的机场链接导入到这些配置中”。请遵循以下 **Skills 交互思路**：
+Docker / iOS / Android 个人配置不含个人例外。
+
+# 九、已知取舍与未测事项
+
+诚实记录，**未测不记为通过**：
+
+*   **本环境无法执行**：远程 rule-provider 的在线下载与更新、有效订阅下的客户端真实启动、真实连接首匹配、双模板 `AUTO_1`/`AUTO_2` 的实际切换、Docker 管理入口在容器外的连通性、iOS 15MB 运行时内存。
+*   **主动不做、已知与推荐写法不同**：iOS 的 DNS 未采用 Stash 官方模板的 `fallback-filter` 组合，保持现有写法——不做无法验证的解析行为变更。
+*   **安全披露**：Docker 的管理接口绑 `0.0.0.0:9090` 且**未设密码**，局域网任意设备可调用 API。配置中留了注释掉的 `secret: YOUR_CONTROLLER_SECRET` 行，填入即可启用鉴权。
+*   **继承自历史配置**：`dns.listen` 为 `0.0.0.0:53`，与「仅监听本机」不完全一致，已保留并披露。
+
+完整逐份实测数字见 [validation.md](validation.md)。
+
+# 十、致谢：上游资源的来源
+
+不造轮子，所有智能分流的「大脑」皆来自开源社区维护的规则集：
+
+*   **[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)**：本仓库全部 22 个规则资源的唯一来源，固定 commit `cb3e075`，以独立 provider 形态逐个引用，可逐个追溯版本。
+*   **[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**：上游规则数据的来源之一。
+
+# 十一、致 AI Agent（智能体）的使用指南
+
+如果你是一个 AI Agent（且具备代码/文件编辑能力，正在协助人类用户），人类用户可能会要求你：「帮我把我的机场链接导入到这些配置中」。请遵循以下交互流程：
 
 ## 交互与执行标准流程
 
 1.  **主动探寻需求与订阅数量**：
-    > “请问您的运行环境是什么（桌面 / 安卓 / iOS / Docker）？您有几个机场订阅链接？
-    > - 如果只有 1 个机场，我将为您选用 `*_single_template.yaml` 模板；
-    > - 如果有 2 个机场，我将为您选用 `*_dual_template.yaml` 模板进行双源容灾调度。”
-2.  **获取链接并修改配置 (严禁污染公共模板)**：
-    *   **【核心底线：文件角色绝对隔离】**：
-        *   **公共模板 (`*_template.yaml`) 是发到 GitHub 给其他人使用的**：必须保持绝对的中立、通用与纯净。**绝对严禁**将用户的真实订阅链接、私有网络 IP、特定商业软件（如 Tailscale、UU远程、绿联NAS 等）或特定私有节点标识写入模板文件。
-        *   **个人配置 (`mihomo_config_*.yaml`) 是用户本地自己使用的**：必须将模板内容复制并另存为**去掉 `_single_template` 或 `_dual_template` 后缀**的新文件（已被 `.gitignore` 严密忽略）。所有私有订阅与深度定制规则只能写入此类自用文件。
-    *   读取对应的 `*_single_template.yaml` 或 `*_dual_template.yaml` 文件。
-    *   找到 `proxy-providers` 块，将 `url: "YOUR_SUBSCRIPTION_LINK_HERE"` 替换为真实链接并另存为个人自用文件。
-3.  **主动提供高级分配建议**：
-    > “需要我帮您针对特定应用分配节点吗？比如让 Telegram 固定走极速节点，让流媒体走低倍率节点？”
-    *   如果用户同意，请修改新文件中的 `rules:` 列表，例如将 `RULE-SET,telegramcidr` 后面的 `PROXY` 更改为具体的策略组名称。
 
+    > 「请问您的运行环境是什么（桌面 / 安卓 / iOS / Docker）？您有几个机场订阅链接？
+    > - 如果只有 1 个机场，我将为您选用 `*_single_template.yaml` 模板；
+    > - 如果有 2 个机场，我将为您选用 `*_dual_template.yaml` 模板进行双源容灾调度。」
+
+2.  **获取链接并修改配置（严禁污染公共模板）**：
+
+    *   **【核心底线：文件角色绝对隔离】**：
+
+        *   **公共模板（`*_template.yaml`）是发到 GitHub 给其他人使用的**：必须保持绝对的中立、通用与纯净。**绝对严禁**将用户的真实订阅链接、私有网络 IP、特定商业软件（如 Tailscale、UU远程、绿联NAS 等）或特定私有节点标识写入模板文件。
+        *   **个人配置（`mihomo_config_*.yaml`，无 `_template` 后缀）是用户本地自用的**：必须将模板内容复制并另存为去掉 `_single_template` 或 `_dual_template` 后缀的新文件（已被 `.gitignore` 密切忽略）。所有私有订阅与深度定制规则只能写入此类自用文件。
+
+    *   读取对应的 `*_single_template.yaml` 或 `*_dual_template.yaml` 文件。
+    *   找到 `proxy-providers` 块，将 `url: "YOUR_SUBSCRIPTION_LINK_HERE"` 替换为真实链接，然后另存为个人自用文件。
+
+3.  **主动提供高级分配建议**：
+
+    > 「需要我帮您针对特定应用分配节点吗？比如让某些应用固定走极速节点，让流媒体走低倍率节点？」
+
+    *   如果用户同意，请修改新文件中的 `rules:` 列表，把目标规则后面的策略组改成具体的组名。

@@ -1,35 +1,23 @@
-# Mihomo (Clash Meta) 配置文件
-# 模式：白名单模式 (默认代理，未明确命中的流量全部走代理)
-# 架构：单机场 (Single Provider) 精简版
+# Mihomo (Clash Meta) 配置 — iOS / 单机场 / 公开模板
+#
+#
+# 路由判定链（自上而下首匹配）：
+#   1. 应当拦截？-> REJECT   2. 不应翻墙？-> DIRECT
+#   3. 需翻墙 + 普通流量？-> AUTO   4. 需翻墙 + 大流量？-> AUTO
+#   5. 其余 -> MATCH,PROXY
+#
+# 资源同质性判定见同目录 rule-design.md。
 
 mixed-port: 7890
 allow-lan: false
 
+
 unified-delay: true
+mode: rule
 
 profile:
   store-selected: true
 
-tun:
-  enable: true
-  auto-route: true
-  auto-detect-interface: true
-  stack: gvisor
-  dns-hijack:
-    - any:53
-
-sniffer:
-  enable: true
-  sniff:
-    tls:
-      ports: [443, 8443]
-    http:
-      ports: [80, 8080-8880]
-
-mode: rule
-log-level: info
-
-# DNS 配置 (可根据自身需求微调)
 dns:
   enable: true
   listen: 0.0.0.0:53
@@ -42,258 +30,202 @@ dns:
     - '*.arpa'
     - 'time.*.com'
     - 'ntp.*.com'
-    - '+.market.xiaomi.com'
     - 'localhost.ptlogin2.qq.com'
     - '*.msftncsi.com'
     - 'www.msftconnecttest.com'
+
   nameserver:
     - 223.5.5.5
     - 114.114.114.114
 
-# 节点订阅配置
-# interval 单位为秒，1440分钟 = 86400秒
+# 节点订阅（公开模板仅用占位符）
 proxy-providers:
   sub_nodes:
     type: http
     url: "YOUR_SUBSCRIPTION_LINK_HERE"
     path: ./proxy_providers/sub_nodes.yaml
     interval: 86400
-    # 利用正则过滤掉名称包含香港相关字眼的节点 (使用 filter 和负向先行断言以兼容 iOS)
-    filter: "(?i)^(?!.*(香港|HK|HongKong|Hong Kong|过滤|剩余|套餐)).*$"
     health-check:
       enable: true
       interval: 600
       url: http://www.gstatic.com/generate_204
 
-# 代理组配置
 proxy-groups:
+  # 手动逃生口 + 最终兜底
   - name: PROXY
     type: select
     proxies:
-      - ROUTE_GLOBAL
-      - ROUTE_AI
-      - AUTO_STRICT
-      - AUTO_GENERAL
+      - AUTO
     use:
       - sub_nodes
 
-  - name: ROUTE_AI
-    type: fallback
-    proxies:
-      - AUTO_STRICT
-      - AUTO_GENERAL
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-
-  - name: ROUTE_GLOBAL
-    type: fallback
-    proxies:
-      - AUTO_GENERAL
-      - AUTO_STRICT
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-
-  - name: AUTO_STRICT
+  # 节点池，自动选优。业务规则直接指向它。
+  # 模板只有一个池，故不设 AUTO / AUTO 中间层——两个都指向同一池是冗余。
+  # 若订阅有大流量节点池（如 YOUR_HEAVY_KEYWORD），参照个人配置拆成 AUTO_STRICT / AUTO_GENERAL，
+  # 再把规则改指 AUTO / AUTO。
+  - name: AUTO
     type: url-test
     use:
       - sub_nodes
-    # 纯净与加速节点池 (VLESS, Trojan, Snell, SS, Hysteria2 等) - 排除老旧明文协议
-    exclude-type: "Vmess|Http|Socks|Socks5"
     url: http://www.gstatic.com/generate_204
     interval: 300
 
-
-  - name: AUTO_GENERAL
-    type: url-test
-    use:
-      - sub_nodes
-    # 兜底备用场景 (VMess, HTTP, Socks) - 排除其它
-    exclude-type: "Vless|Trojan|Snell|Shadowsocks|ShadowsocksR|WireGuard|Tuic|Hysteria|Hysteria2"
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-
-# 规则订阅配置 (Loyalsoldier - 全量引入)
-# interval 单位为秒，86400秒
+# 以下资源全部取自 MetaCubeX/meta-rules-dat，固定到同一 commit
 rule-providers:
-
-  sukka_ai:
-    type: http
-    behavior: classical
-    format: text
-    url: "https://ruleset.skk.moe/Clash/non_ip/ai.txt"
-    path: ./rule_providers/sukka_ai.txt
-    interval: 86400
-
-  global_media:
-    type: http
-    behavior: classical
-    format: yaml
-    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GlobalMedia/GlobalMedia.yaml"
-    path: ./rule_providers/global_media.yaml
-    interval: 86400
-
-  sukka_cdn_domain:
+  # —— 拦截 ——
+  category_ads_all:
     type: http
     behavior: domain
-    format: text
-    url: "https://ruleset.skk.moe/Clash/domainset/cdn.txt"
-    path: ./rule_providers/sukka_cdn_domain.txt
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-ads-all.yaml"
+    path: ./rule_providers/category-ads-all.yaml
     interval: 86400
-
-  sukka_cdn_non_ip:
-    type: http
-    behavior: classical
-    format: text
-    url: "https://ruleset.skk.moe/Clash/non_ip/cdn.txt"
-    path: ./rule_providers/sukka_cdn_non_ip.txt
-    interval: 86400
-
-  cloudflare:
-    type: http
-    behavior: classical
-    format: yaml
-    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflare/Cloudflare.yaml"
-    path: ./rule_providers/cloudflare.yaml
-    interval: 86400
-
-  reject:
+  # —— 不翻墙 ——
+  private_domain:
     type: http
     behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/reject.txt"
-    path: ./rule_providers/reject.yaml
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/private.yaml"
+    path: ./rule_providers/private-domain.yaml
     interval: 86400
-
-  icloud:
+  private_ip:
     type: http
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/icloud.txt"
-    path: ./rule_providers/icloud.yaml
+    behavior: ipcidr
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/private.yaml"
+    path: ./rule_providers/private-ip.yaml
     interval: 86400
-
+  geo_cn_ip:
+    type: http
+    behavior: ipcidr
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/cn.yaml"
+    path: ./rule_providers/geo-cn-ip.yaml
+    interval: 86400
+  # 国内可用系统服务
   apple:
     type: http
     behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/apple.txt"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/apple.yaml"
     path: ./rule_providers/apple.yaml
     interval: 86400
-
+  # 国内可用系统服务
+  microsoft:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/microsoft.yaml"
+    path: ./rule_providers/microsoft.yaml
+    interval: 86400
+  # 境内域名全集，含 +.cn 等注册域（非 geolocation-cn 那个窄集合）
+  cn:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/cn.yaml"
+    path: ./rule_providers/cn.yaml
+    interval: 86400
+  # —— 需翻墙 + 普通流量 ——
+  ai_chat:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-ai-chat-!cn.yaml"
+    path: ./rule_providers/ai-chat.yaml
+    interval: 86400
   google:
     type: http
     behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/google.txt"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/google.yaml"
     path: ./rule_providers/google.yaml
     interval: 86400
-
-  proxy:
+  # —— 需翻墙 + 大流量 ——
+  media:
     type: http
     behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/proxy.txt"
-    path: ./rule_providers/proxy.yaml
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-media.yaml"
+    path: ./rule_providers/media.yaml
     interval: 86400
-
-  direct:
+  # 社交图片视频（含 twimg / twvid / fbcdn）
+  social_media_nc:
     type: http
     behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/direct.txt"
-    path: ./rule_providers/direct.yaml
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-social-media-!cn.yaml"
+    path: ./rule_providers/social-media.yaml
     interval: 86400
-
-  private:
+  # 网盘与文件同步
+  netdisk_nc:
     type: http
     behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/private.txt"
-    path: ./rule_providers/private.yaml
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-netdisk-!cn.yaml"
+    path: ./rule_providers/netdisk.yaml
     interval: 86400
-
+  # —— 需翻墙主体 ——
   gfw:
     type: http
     behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/gfw.txt"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/gfw.yaml"
     path: ./rule_providers/gfw.yaml
     interval: 86400
-
-  tld-not-cn:
+  # —— CDN 静态/媒体（域名层）——
+  cdn_nc:
     type: http
     behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/tld-not-cn.txt"
-    path: ./rule_providers/tld-not-cn.yaml
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-cdn-!cn.yaml"
+    path: ./rule_providers/cdn-nc.yaml
     interval: 86400
-
-  cncidr:
+  cdn_akamai:
     type: http
-    behavior: ipcidr
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/cncidr.txt"
-    path: ./rule_providers/cncidr.yaml
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/akamai.yaml"
+    path: ./rule_providers/cdn-akamai.yaml
     interval: 86400
-
-  lancidr:
+  cdn_fastly:
     type: http
-    behavior: ipcidr
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/lancidr.txt"
-    path: ./rule_providers/lancidr.yaml
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/fastly.yaml"
+    path: ./rule_providers/cdn-fastly.yaml
     interval: 86400
 
-  applications:
-    type: http
-    behavior: classical
-    format: yaml
-    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/applications.txt"
-    path: ./rule_providers/applications.yaml
-    interval: 86400
-
-# 路由规则 (白名单模式匹配)
 rules:
-  # 0. 阻断 QUIC (强制浏览器 fallback 到 TCP)
-  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
+  # 1) 拦截
+  - RULE-SET,category_ads_all,REJECT
 
-  # 1. 优先放行特殊流量及局域网直连
-  - RULE-SET,applications,DIRECT
-  - RULE-SET,private,DIRECT
-  - RULE-SET,lancidr,DIRECT
-  - GEOIP,lan,DIRECT
+  # 2) 不翻墙
+  - RULE-SET,private_domain,DIRECT
+  - RULE-SET,private_ip,DIRECT,no-resolve
+  - RULE-SET,geo_cn_ip,DIRECT,no-resolve
 
-  # 2. 拦截广告和恶意域名
-  - RULE-SET,reject,REJECT
+  # 3) 阻断常规浏览器 QUIC，强制回落 TCP
+  #    否则抓不到 TLS SNI，域名规则无法匹配。
+  #    排在个人例外之后，使 UDP 打洞类流量不被误杀。
+  #    [iOS 暂停] AND 逻辑规则是 Mihomo/Clash Premium 扩展，Stash 是否支持未证实。
+  #    保守起见先注释；若实测可用，取消注释即可。
+  # - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
 
-  # 3. 常见大厂基础服务直连
-  - RULE-SET,icloud,DIRECT
+  # 4) 需翻墙主体 -> AUTO
+  - RULE-SET,gfw,AUTO
+
+  # 5) 境内域名 -> DIRECT
+  #    必须在 gfw 之后：gfw 有 22 条受限站点被 cn 覆盖（futu.cn / longbridge.cn / google.cn 等）。
+  #    必须在大流量层之前：media / social / cdn 合计 46 条境内服务被 cn 覆盖，应直连。
+  - RULE-SET,cn,DIRECT
+
+  # 6) 需翻墙 + 普通流量 -> AUTO（首选纯净节点）
+  #    排在 cn 之后：google 有 15 条 -cn 国内基建应直连。
+  - RULE-SET,ai_chat,AUTO
+  - RULE-SET,google,AUTO
+
+  # 7) 需翻墙 + 大流量 -> AUTO（首选 YOUR_HEAVY_KEYWORD）
+  - RULE-SET,media,AUTO
+  - RULE-SET,social_media_nc,AUTO
+  - RULE-SET,netdisk_nc,AUTO
+
+  # 8) 国内可用系统服务 -> DIRECT
+  #    apple 含 apple-update（21/21 全覆盖），无需单列。
+  #    microsoft 不覆盖 win-update 全集，故 win_update 单列（见上）。
+  #    置于 gfw 之后：apple / microsoft 与 gfw 的 1 / 17 条交叠保持代理。
   - RULE-SET,apple,DIRECT
+  - RULE-SET,microsoft,DIRECT
 
-  # 4. 国内服务直连名单 (域名规则严格优先于 IP 规则，避免 Fake-IP 下产生不必要 DNS 解析与泄露)
-  - RULE-SET,direct,DIRECT
-  - GEOSITE,CN,DIRECT
-  - RULE-SET,cncidr,DIRECT
-  - GEOIP,CN,DIRECT
+  # 9) CDN 静态与媒体 -> AUTO
+  #    域名层抓 fake-ip 下的域名连接；IP 层抓 IP 直连与已解析连接，两者缺一不可。
+  - RULE-SET,cdn_nc,AUTO
+  - RULE-SET,cdn_akamai,AUTO
+  - RULE-SET,cdn_fastly,AUTO
 
-
-  # 6. 高敏感专享代理业务 (最高优先级，特异性优选高纯净与高可靠协议组 ROUTE_AI)
-  - RULE-SET,sukka_ai,ROUTE_AI
-  - RULE-SET,google,ROUTE_AI
-
-  # 7. 国际流媒体音视频 (走 ROUTE_GLOBAL 策略组，首选常规/低倍率节点并具备容灾 fallback)
-  - RULE-SET,global_media,ROUTE_GLOBAL
-
-  # 8. 通用受限被阻断站点 (GFW 强阻断列表)
-  - RULE-SET,gfw,ROUTE_GLOBAL
-  - GEOSITE,gfw,ROUTE_GLOBAL
-  - RULE-SET,proxy,ROUTE_GLOBAL
-
-  # 9. 静态大流量 / CDN / 境外泛域名 (走 ROUTE_GLOBAL 与 PROXY)
-  - RULE-SET,sukka_cdn_domain,ROUTE_GLOBAL
-  - RULE-SET,sukka_cdn_non_ip,ROUTE_GLOBAL
-  - RULE-SET,cloudflare,ROUTE_GLOBAL
-  - RULE-SET,tld-not-cn,PROXY
-
-  # 10. 兜底规则: 白名单模式核心
+  # 10) 兜底
   - MATCH,PROXY
