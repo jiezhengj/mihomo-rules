@@ -75,7 +75,7 @@
  2. private_domain                    -> DIRECT
  3. private_ip                        -> DIRECT   (no-resolve)
  4. geo_cn_ip                         -> DIRECT   (no-resolve)
-    ── 个人例外（Tailscale / UU 远程 / 绿联 NAS）-> DIRECT ──
+    ── 个人例外 -> DIRECT ──（仅个人配置，见设计文档）
  5. QUIC: UDP 且目标端口 443          -> REJECT
  6. gfw                               -> ROUTE_NORMAL
  7. cn                                -> DIRECT
@@ -96,7 +96,7 @@
 规则顺序不是随手排的，几处关键取舍：
 
 *   **`cn` 在 `gfw` 之后、大流量层之前**：`gfw` 有 22 条受限站点被 `cn` 覆盖（`futu.cn`、`longbridge.cn`、`google.cn`、`bloomberg.cn` 等），必须先由 `gfw` 捞走；而大流量层有 59 条境内服务被 `cn` 覆盖，必须先由 `cn` 直连。
-*   **QUIC 阻断排在个人例外之后**：拦截 QUIC 强迫浏览器降级 TCP。很多时候看视频卡顿并不是节点慢，而是浏览器偷偷用了基于 UDP 的 QUIC——运营商对 UDP 的劣质 QoS 以及部分节点的 UDP 转发断流才是真凶。放个人例外之后是为了让 Tailscale 的 UDP 打洞不被误杀。
+*   **QUIC 阻断**：拦截 QUIC 强迫浏览器降级 TCP。很多时候看视频卡顿并不是节点慢，而是浏览器偷偷用了基于 UDP 的 QUIC——运营商对 UDP 的劣质 QoS 以及部分节点的 UDP 转发断流才是真凶。它在个人配置里排在个人例外之后，是为了不误杀依赖 UDP 打洞的内网组网流量（见设计文档）。
 *   **游戏下载在 `gfw` 之后、CDN 之前**：集合里的共享 CDN 边缘主机需代理，让 `gfw` 先命中；而 CDN 集合会吞掉其 10 个成员，所以 CDN 层必须在其后。
 *   **`win_update` 必须单列**：`microsoft` 只覆盖 `win-update` 的 358/364 条，余 6 条挂在共享 CDN 边缘域名下会被推去代理。移动端不引入。
 *   **CDN 层在 `gfw` 之后**：代价是 6 个 CDN 边缘主机落 `ROUTE_NORMAL`，属已知软故障。
@@ -108,15 +108,15 @@
 | 组 | 类型 | 候选 | 出现于 | 含义 |
 |---|---|---|---|---|
 | `AUTO` | url-test | 全部节点，不区分 | 仅公开模板 | 节点池，自动选优。业务规则直接指向它 |
-| `ROUTE_NORMAL` | fallback | `AUTO_STRICT → AUTO_GENERAL → AUTO_BACKUP` | 仅个人配置 | 普通流量：交互型、非大流量 |
-| `ROUTE_HEAVY` | fallback | `AUTO_GENERAL → AUTO_STRICT → AUTO_BACKUP` | 仅个人配置 | 大流量：持续大载荷 |
-| `AUTO_STRICT` | url-test | **仅机场 A**，排除 YOUR_HEAVY_KEYWORD | 仅个人配置 | 机场 A 干净节点 |
-| `AUTO_GENERAL` | url-test | **仅机场 A**，只要 YOUR_HEAVY_KEYWORD | 仅个人配置 | 机场 A 大流量节点 |
-| `AUTO_BACKUP` | url-test | **仅机场 B**，不分池 | 仅个人配置 | 机场 B 整体作末位逃生 |
+| `ROUTE_NORMAL` | fallback | 干净节点池 → 大流量节点池 → 末位逃生池 | 仅个人配置 | 普通流量：交互型、非大流量 |
+| `ROUTE_HEAVY` | fallback | 大流量节点池 → 干净节点池 → 末位逃生池 | 仅个人配置 | 大流量：持续大载荷 |
+| `AUTO_STRICT` | url-test | 第一份订阅，按节点名排除大流量节点 | 仅个人配置 | 干净/交互节点 |
+| `AUTO_GENERAL` | url-test | 第一份订阅，按节点名只取大流量节点 | 仅个人配置 | 下载/视频/持续传输节点 |
+| 末位逃生池 | url-test | 第二份订阅整体，不分池 | 仅个人配置 | 独立逃生入口，恒在链尾 |
 | `AUTO_1` / `AUTO_2` | url-test | 各引用一份订阅 | 仅双机场公开模板 | 独立逃生入口 |
 | `PROXY` | select | 节点池 + 逃生口 | 全部 | 手动逃生口与最终兜底 |
 
-三个节点池**互斥**：机场 A 的节点按 `YOUR_HEAVY_KEYWORD` 分进 `AUTO_STRICT` / `AUTO_GENERAL`，机场 B 的节点只进 `AUTO_BACKUP`。`AUTO_BACKUP` 因此是真正独立的逃生池，`ROUTE_*` 的三级链前两级走机场 A、兜不住才切机场 B。`YOUR_HEAVY_KEYWORD` 是机场 A 订阅下的一个节点名，用来识别其内部的大流量节点。
+三个节点池**互斥**：第一份订阅的节点按节点名分进干净池与大流量池，第二份订阅的节点整体只进末位逃生池。逃生池因此是真正独立的，`ROUTE_*` 链的前两级走第一份订阅、兜不住才切第二份。具体节点名与订阅标识见设计文档。
 
 **模板没有 ROUTE 层**：模板只有一个节点池，普通流量与大流量落到同一组，再包一层 `ROUTE_NORMAL` / `ROUTE_HEAVY` 只是纯转发。所以模板的业务规则直接指向 `AUTO`，两个组各司其职。个人配置才需要 `ROUTE_*`——那里是两个真实的池，两条链的首选顺序不同。
 
@@ -167,7 +167,7 @@ graph TD
     Match -- 受限流量/未匹配 --> ActionProxy((PROXY / 节点池))
 ```
 
-# 七、iOS 与节点过滤
+# 七、iOS 适配
 
 iOS 目标客户端是 **Stash**，不是 Mihomo。它与 Mihomo 在几处不兼容，iOS 三份配置已相应调整：
 
@@ -178,21 +178,9 @@ iOS 目标客户端是 **Stash**，不是 Mihomo。它与 Mihomo 在几处不兼
 | `tun` 块 | 有 | **无**，Stash 由 app 的 VPN profile 管理 |
 | QUIC 阻断 `AND,(…)` | 启用 | **注释保留**，Stash 支持与否未证实 |
 
-节点过滤只针对个人配置的机场 B 订阅：BACKUP_SUB 有假节点、香港节点不好用，故用 `exclude-filter` 剔除（iOS 平台改用负向先行断言以兼容正则）；过滤词为 `香港|HK|HongKong|Hong Kong|过滤|剩余|套餐`。机场 A 订阅无此问题，**不过滤**；公开模板不做任何订阅假设。
+关于**节点名过滤**：公开模板不做任何订阅假设、不设过滤；是否过滤、过滤什么词，取决于具体订阅的质量，属个人配置范畴，见设计文档。
 
-# 八、个人例外
-
-仅 Desktop 个人配置插入 48 条个人例外，位置在 `geo_cn_ip` 之后、任何代理规则之前（归属 `DIRECT`）：
-
-| 例外组 | 用途 | 平台 |
-|---|---|---|
-| Tailscale | 零配置内网组网与远程访问 | 仅 Desktop 个人 |
-| UU 远程 | 远程桌面与串流 | 仅 Desktop 个人 |
-| 绿联 NAS | 私有网络存储 | 仅 Desktop 个人 |
-
-Docker / iOS / Android 个人配置不含个人例外。
-
-# 九、已知取舍与未测事项
+# 八、已知取舍与未测事项
 
 诚实记录，**未测不记为通过**：
 
@@ -203,14 +191,15 @@ Docker / iOS / Android 个人配置不含个人例外。
 
 完整逐份实测数字见 [validation.md](validation.md)。
 
-# 十、致谢：上游资源的来源
+# 九、致谢：直接来源
 
-不造轮子，所有智能分流的「大脑」皆来自开源社区维护的规则集：
+本配置只列**直接来源**——所有规则资源都从这一个仓库取用，没有第二个直连来源：
 
-*   **[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)**：本仓库全部 22 个规则资源的唯一来源，固定 commit `cb3e075`，以独立 provider 形态逐个引用，可逐个追溯版本。
-*   **[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**：上游规则数据的来源之一。
+*   **[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)**：本仓库全部 22 个规则资源的唯一直接来源，固定 commit `cb3e075`，以独立 provider 形态逐个引用，可逐个追溯版本。
 
-# 十一、致 AI Agent（智能体）的使用指南
+（其上游数据来自哪些社区项目、如何中转，见 [rule-design.md](rule-design.md) 的上游说明。）
+
+# 十、致 AI Agent（智能体）的使用指南
 
 如果你是一个 AI Agent（且具备代码/文件编辑能力，正在协助人类用户），人类用户可能会要求你：「帮我把我的机场链接导入到这些配置中」。请遵循以下交互流程：
 
@@ -226,7 +215,7 @@ Docker / iOS / Android 个人配置不含个人例外。
 
     *   **【核心底线：文件角色绝对隔离】**：
 
-        *   **公共模板（`*_template.yaml`）是发到 GitHub 给其他人使用的**：必须保持绝对的中立、通用与纯净。**绝对严禁**将用户的真实订阅链接、私有网络 IP、特定商业软件（如 Tailscale、UU远程、绿联NAS 等）或特定私有节点标识写入模板文件。
+        *   **公共模板（`*_template.yaml`）是发到 GitHub 给其他人使用的**：必须保持绝对的中立、通用与纯净。**绝对严禁**将用户的真实订阅链接、私有网络 IP、特定商业软件的定制规则，或任何私有节点标识与过滤词写入模板文件。
         *   **个人配置（`mihomo_config_*.yaml`，无 `_template` 后缀）是用户本地自用的**：必须将模板内容复制并另存为去掉 `_single_template` 或 `_dual_template` 后缀的新文件（已被 `.gitignore` 密切忽略）。所有私有订阅与深度定制规则只能写入此类自用文件。
 
     *   读取对应的 `*_single_template.yaml` 或 `*_dual_template.yaml` 文件。
