@@ -7,7 +7,8 @@ mihomo_config_docker_temp.yaml
 mihomo_config_android_temp.yaml
 LOCAL_ARCH_DESIGN.md
 
-# 本地实测台账：含个人环境与订阅细节，仅本地保存，不进入公开仓库
+# 个人设计文档与实测台账：含个人环境/订阅细节，仅本地保存，不进入公开仓库
+rule-design.md
 validation.md
 
 \n
