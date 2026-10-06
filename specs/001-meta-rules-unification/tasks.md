@@ -3,7 +3,7 @@ description: "001-meta-rules-unification 的实施任务清单"
 ---
 
 **Feature**：`001-meta-rules-unification`
-**输入**：[spec.md](spec.md)、[plan.md](plan.md)、`rule-design.md`
+**输入**：[spec.md](spec.md)、[plan.md](plan.md)、本地设计文档
 **性质**：从零重写，不是迁移。旧配置只提供个人例外、平台差异、模板简化三类参考。
 
 # 阶段 1：保留旧配置
@@ -19,7 +19,7 @@ description: "001-meta-rules-unification 的实施任务清单"
 - [X] T004 对候选资源做全量后缀语义比对，判定每个集合的成员是否落在同一路由出口。核心问题：是否混了「需翻墙 / 不需翻墙」，是否混了「大流量 / 非大流量」。
 - [X] T005 按判定结果取舍资源：同质的前提下取覆盖最全的（如 `category-ads-all` 含 `category-ads` 全部 850 条，取全）；纯子集不单列（如 `category-media-cn`、`category-netdisk-cn` 100% 落在 `geolocation-cn` 内）；确实不同质的整体弃用（如 `category-games` 268 条落在境内集合、`steam` 下载与社区混杂）。**后续修订**：`category-media` 与 `category-ai-chat-!cn` 最初因不同质被弃，后经确认按「宿主内容类型」放宽 `ROUTE_NORMAL`↔`ROUTE_HEAVY` 这条软门槛后重新采用（详见 T020 / T024 与 spec.md 决策 1、4），不再弃用。
 - [X] T006 裁定重合集合的顺序：`game_download` 与 `gfw` 的 3 条 Akamai 共享主机、`geolocation-cn` 与 `gfw` 的 2 条受限站点，均由顺序解决，使两类成员各得其所。
-- [X] T007 把全部判定依据、弃用理由、顺序反事实写入 `rule-design.md`。抽样不冒充全量，`.mrs` 与 `.list` 的等价边界如实标注。
+- [X] T007 把全部判定依据、弃用理由、顺序反事实写入本地设计文档。抽样不冒充全量，`.mrs` 与 `.list` 的等价边界如实标注。
 
 # 阶段 3：配置实现
 
@@ -40,7 +40,7 @@ description: "001-meta-rules-unification 的实施任务清单"
 
 # 阶段 5：按已确认决策修订配置
 
-本阶段的决策已在 [spec.md](spec.md) 与 `rule-design.md` 中确认并留痕，配置文件亦已按此修订完成，以下各项均已勾选。
+本阶段的决策已在 [spec.md](spec.md) 与本地设计文档中确认并留痕，配置文件亦已按此修订完成，以下各项均已勾选。
 
 - [X] T019 个人配置去掉 `AUTO_1`/`AUTO_2`，改为 `AUTO_BACKUP`（`use: [sub_nodes_backup]`）追加在 `PROXY`、`ROUTE_NORMAL`、`ROUTE_HEAVY` 末位。**三池互斥**：`AUTO_STRICT`/`AUTO_GENERAL` 只吃 `sub_nodes_primary`（按节点关键字分池，大流量节点是主订阅下的节点、与备订阅无关），`AUTO_BACKUP` 只吃 `sub_nodes_backup`。早期曾照搬老配置让前两池同时吃两份订阅，导致备订阅节点混入、`AUTO_BACKUP` 失去独立性，已订正。
 - [X] T020 合并 media：以 `category-media` 替换现有 8 个流媒体单集合，整体走 `ROUTE_HEAVY`。
@@ -52,7 +52,7 @@ description: "001-meta-rules-unification 的实施任务清单"
 - [X] T025 补国内可用系统服务直连：`apple`、`microsoft` 走 `DIRECT`，排在 `gfw` 之后。`apple-update` 21/21 全在 `apple` 内不单列；`win-update` **不是** `microsoft` 子集（仅覆盖 358/364，余 6 条共享 CDN 边缘主机），Desktop/Docker 单列 `win_update`，移动端不引入。
 - [X] T026 策略组更名：`ROUTE_AI` → `ROUTE_NORMAL`（普通流量）、`ROUTE_GLOBAL` → `ROUTE_HEAVY`（大流量）。早期节点按适用场景分纯净/普通/大流量三组，`ROUTE_AI` 原先只针对 AI、`ROUTE_GLOBAL` 表达走全球节点；合并后语义与名字脱节。新名直接编码判定链的分类轴（是不是大流量），并延续历史词汇。文档与 12 份配置已同步替换，`AUTO_*` 未受影响，改名后 12/12 解析通过。
 - [X] T027 加 QUIC 阻断：`AND,((NETWORK,UDP),(DST-PORT,443))` → `REJECT`，排在个人例外之后。
-- [X] T028 按 rule-design.md 的最终顺序重排 12 份配置的规则段，并重跑解析与结构检查。
+- [X] T028 按本地设计文档的最终顺序重排 12 份配置的规则段，并重跑解析与结构检查。
 
 # 阶段 6：平台差异与模板简化
 
@@ -83,7 +83,7 @@ description: "001-meta-rules-unification 的实施任务清单"
 - 三轮独立无上下文复评收到 13 条阻塞项，全部经独立复现后修复；第四轮文档侧与配置侧均 PASS。
 - 实测发现并修复两项设计偏差：`geolocation-cn` 误用为境内域名集合（应为 `cn`，5,385 → 111,224 条）；`AUTO_STRICT`/`AUTO_GENERAL` 误吃两份订阅（应仅主订阅，与 `AUTO_BACKUP` 互斥）。
 - 已知未测事项与已知软故障均记录在本地实测台账 `validation.md`，未将「未测」记为「通过」。
-- 一处**已知且无法由顺序解决**的取舍：`gfw` 与三层大流量集合、`cn` 构成三方牵制（`gfw < cn < 大流量 < gfw` 为环），当前采用唯一「零打不开、零境内走代理」的排列，代价是 70 条大流量落 `ROUTE_NORMAL`。推演与三种取舍的代价见 `rule-design.md`，待用户实测后决定是否取另一种。
+- 一处**已知且无法由顺序解决**的取舍：`gfw` 与三层大流量集合、`cn` 构成三方牵制（`gfw < cn < 大流量 < gfw` 为环），当前采用唯一「零打不开、零境内走代理」的排列，代价是 70 条大流量落 `ROUTE_NORMAL`。推演与三种取舍的代价见本地设计文档，待用户实测后决定是否取另一种。
 
 # 依赖
 
