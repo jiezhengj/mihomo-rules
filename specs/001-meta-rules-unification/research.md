@@ -26,7 +26,7 @@
 
 # 决策 3：将规则段作为一个整体设计，旧配置只按授权边界作参考
 
-**Decision**：`rule-providers` 前的配置内容可参考旧配置重建；自 `rule-providers` 声明开始，provider 与后续 `rules` 均作为一个整体，依据新场景、数据审阅和先匹配决策重新设计。旧 12 份配置保留基线副本。明确指定的 Tailscale、UU 远程、绿联 NAS 只在相应个人配置按平台处理，先审查平台适用性与重叠；不得进入公开模板。建议新矩阵目录 ``，其中 `README.md` 概述矩阵和来源、`rule-design.md` 保存场景与集合审阅、`validation.md` 保存检查结果；建议历史基线目录 `archive/meta-rules-unification-baseline/`。
+**Decision**：`rule-providers` 前的配置内容可参考旧配置重建；自 `rule-providers` 声明开始，provider 与后续 `rules` 均作为一个整体，依据新场景、数据审阅和先匹配决策重新设计。旧 12 份配置保留基线副本。明确指定的 Tailscale、UU 远程、绿联 NAS 只在相应个人配置按平台处理，先审查平台适用性与重叠；不得进入公开模板。建议新矩阵目录 ``，其中 `README.md` 概述矩阵和来源、`rule-design.md` 保存场景与集合审阅、本地实测台账 `validation.md` 保存检查结果（该文件已列入 `.gitignore`，不随仓库发布）；建议历史基线目录 `archive/meta-rules-unification-baseline/`。
 
 **Rationale**：这满足 Spec 中完整矩阵、独立目录、公开/个人隔离及旧配置归档要求，并限制旧配置的用途，避免历史规则牵引新规则设计。
 

@@ -7,6 +7,9 @@ mihomo_config_docker_temp.yaml
 mihomo_config_android_temp.yaml
 LOCAL_ARCH_DESIGN.md
 
+# 本地实测台账：含个人环境与订阅细节，仅本地保存，不进入公开仓库
+validation.md
+
 \n
 /.agent-state/spec_kit_component_update_cache.json
 

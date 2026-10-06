@@ -48,4 +48,4 @@ mihomo -t -f mihomo_config_desktop_single_template.yaml
 
 # 结果记录
 
-将日期、配置清单、Mihomo 版本、每份配置的检查结果、代表场景表引用、私有边界检查结果、平台裁剪差异，以及尚未解决的覆盖或设备实测限制记录在 `validation.md`。场景表、REJECT 样例依据、数据来源、交叠与首匹配分析记录在同目录的 `rule-design.md`；`README.md` 提供矩阵和路由设计概览。不要在公开记录中包含本地私密值。
+将日期、配置清单、Mihomo 版本、每份配置的检查结果、代表场景表引用、私有边界检查结果、平台裁剪差异，以及尚未解决的覆盖或设备实测限制记录在本地实测台账 `validation.md`（该文件含个人环境信息，已列入 `.gitignore`，仅本地保存）。场景表、REJECT 样例依据、数据来源、交叠与首匹配分析记录在同目录的 `rule-design.md`；`README.md` 提供矩阵和路由设计概览。不要在公开记录中包含本地私密值。

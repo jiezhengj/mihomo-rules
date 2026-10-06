@@ -9,7 +9,7 @@
 - **修复状态**: 未实施
 - **验证状态**: 未运行；不能视为已修复
 
-用户反馈 Desktop 上 Epic 游戏下载仍经代理，并提供连接：`egdownload.fastly-edge.com:443`，下载 193 MB，链路 `ROUTE_GLOBAL / AUTO_GENERAL / JMS-1423733@c2YOUR_HEAVY_KEYWORD.portablesubmarines.com:443`，命中规则 `RuleSet(proxy)`。用户要求从上游规则集和规则顺序中找通用解决办法，不接受为单个服务加规则。
+用户反馈 Desktop 上 Epic 游戏下载仍经代理，并提供连接：`egdownload.fastly-edge.com:443`，下载 193 MB，链路 `ROUTE_GLOBAL / AUTO_GENERAL / NODE_NAME_REDACTED大流量节点.portablesubmarines.com:443`，命中规则 `RuleSet(proxy)`。用户要求从上游规则集和规则顺序中找通用解决办法，不接受为单个服务加规则。
 
 预期是 Epic 游戏下载命中现有上游游戏下载/大文件下载规则并直连。当前连接却被代理规则截获，产生了实际的大流量代理消耗。
 

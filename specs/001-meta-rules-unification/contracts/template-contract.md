@@ -14,7 +14,7 @@
 - 路由意图按以下顺序判断：应拦截的流量走 `REJECT`；其余流量中不应代理的走 `DIRECT`；需要代理的非大流量走 `ROUTE_NORMAL`，需要代理的大流量走 `ROUTE_HEAVY`。业务规则只指向 `REJECT` / `DIRECT` / `ROUTE_NORMAL` / `ROUTE_HEAVY`，不得直接指向 `AUTO_*`。
 - 候选链按配置类型区分，且只引用当前配置实际定义的策略组：
   - **4 份个人配置**：`ROUTE_NORMAL` 候选 `AUTO_STRICT → AUTO_GENERAL → AUTO_BACKUP`；`ROUTE_HEAVY` 候选 `AUTO_GENERAL → AUTO_STRICT → AUTO_BACKUP`。`AUTO_BACKUP` 恒在末位。
-  - **8 份公开模板**：`ROUTE_NORMAL` 与 `ROUTE_HEAVY` 均 fallback 到单一 `AUTO` 组。模板用占位订阅，无法预设 `YOUR_HEAVY_KEYWORD` 节点命名，故不拆节点池。
+  - **8 份公开模板**：`ROUTE_NORMAL` 与 `ROUTE_HEAVY` 均 fallback 到单一 `AUTO` 组。模板用占位订阅，无法预设节点命名，故不拆节点池。
 - 公开双机场模板保留 `AUTO_1` / `AUTO_2` 作为 UI 独立逃生入口；个人配置不设这两组。`ROUTE_NORMAL` 名称不表示 AI 业务范围（原名 `ROUTE_AI` 已因语义脱节更名）。
 - Desktop 游戏本体、补丁或分发切片下载按通用操作范围审阅 DIRECT 意图和规则组覆盖；商店、推荐、社区及营销请求不属于该下载操作。所有服务品牌适用相同判断，不另设品牌验收项或单服务规则。
 - REJECT 路径须由维护者在规则设计记录中点名代表场景并说明屏蔽依据。

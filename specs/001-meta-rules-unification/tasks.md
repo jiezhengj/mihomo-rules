@@ -35,14 +35,14 @@ description: "001-meta-rules-unification 的实施任务清单"
 - [X] T014 静态复核：每条 `RULE-SET` 都有声明；业务规则不直连 `AUTO_*`；`ROUTE_NORMAL` 为 `AUTO_STRICT → AUTO_GENERAL`、`ROUTE_HEAVY` 为 `AUTO_GENERAL → AUTO_STRICT`；`MATCH,PROXY` 是最后一条；首条是广告拦截。**后续修订**：候选链按配置类型区分——个人配置追加 `AUTO_BACKUP` 末位、公开模板合并为单一 `AUTO`，最终态见 T019 / T034 与 spec.md 验收 4。
 - [X] T015 隐私边界：8 份公开模板不含 Tailscale / UU 远程 / 绿联 NAS 标识；公开模板只用占位订阅，个人配置用真实订阅且被 Git 忽略。
 - [X] T016 归档一致性：`archive/meta-rules-unification-baseline/` 的 12 份与根目录历史源文件逐字节一致。
-- [X] T017 把验证结果、执行边界、未测事项写入 `validation.md`。
-- [X] T018 写 `README.md`：文件矩阵、判定链、平台差异、公开/个人边界、`AUTO_GENERAL` 的 YOUR_HEAVY_KEYWORD 命名适配说明。
+- [X] T017 把验证结果、执行边界、未测事项写入本地实测台账 `validation.md`（该文件仅本地保存，已列入 `.gitignore`，不随仓库发布）。
+- [X] T018 写 `README.md`：文件矩阵、判定链、平台差异、公开/个人边界、`AUTO_GENERAL` 的节点命名适配说明。
 
 # 阶段 5：按已确认决策修订配置
 
 本阶段的决策已在 [spec.md](spec.md) 与 `rule-design.md` 中确认并留痕，配置文件亦已按此修订完成，以下各项均已勾选。
 
-- [X] T019 个人配置去掉 `AUTO_1`/`AUTO_2`，改为 `AUTO_BACKUP`（`use: [sub_nodes_backup]`）追加在 `PROXY`、`ROUTE_NORMAL`、`ROUTE_HEAVY` 末位。**三池互斥**：`AUTO_STRICT`/`AUTO_GENERAL` 只吃 `sub_nodes_primary`（按节点名 `YOUR_HEAVY_KEYWORD` 分池，YOUR_HEAVY_KEYWORD 是 PRIMARY_SUB 下的节点、与 BACKUP_SUB 无关），`AUTO_BACKUP` 只吃 `sub_nodes_backup`。早期曾照搬老配置让前两池同时吃两份订阅，导致 BACKUP_SUB 节点混入、`AUTO_BACKUP` 失去独立性，已订正。
+- [X] T019 个人配置去掉 `AUTO_1`/`AUTO_2`，改为 `AUTO_BACKUP`（`use: [sub_nodes_backup]`）追加在 `PROXY`、`ROUTE_NORMAL`、`ROUTE_HEAVY` 末位。**三池互斥**：`AUTO_STRICT`/`AUTO_GENERAL` 只吃 `sub_nodes_primary`（按节点关键字分池，大流量节点是主订阅下的节点、与备订阅无关），`AUTO_BACKUP` 只吃 `sub_nodes_backup`。早期曾照搬老配置让前两池同时吃两份订阅，导致备订阅节点混入、`AUTO_BACKUP` 失去独立性，已订正。
 - [X] T020 合并 media：以 `category-media` 替换现有 8 个流媒体单集合，整体走 `ROUTE_HEAVY`。
 - [X] T021 补 CDN 层：域名层 `category-cdn-!cn` / `akamai` / `fastly` 与 IP 层 `geoip.cloudflare` / `cloudfront` / `fastly` 全部走 `ROUTE_HEAVY`；置于 `game_download` 之后。
 - [X] T022 补社交图片视频：`category-social-media-!cn` 走 `ROUTE_HEAVY`，覆盖 twimg / twvid / fbcdn，不加 Twitter 专属规则。
@@ -58,13 +58,13 @@ description: "001-meta-rules-unification 的实施任务清单"
 
 老配置分析后的平台裁剪与模板简化，已确认并落地。
 
-- [X] T029 iOS 正则兼容：个人配置的节点过滤与 `YOUR_HEAVY_KEYWORD` 分池在 iOS 上用负向先行断言 `filter: "(?i)^(?!.*…).*$"` 代替 `exclude-filter`，其余平台用 `exclude-filter`。
-- [X] T030 订阅节点过滤仅个人配置的 BACKUP_SUB 订阅需要：过滤 `香港|HK|HongKong|Hong Kong|过滤|剩余|套餐`（BACKUP_SUB 有假节点、香港节点不好用）；PRIMARY_SUB 订阅无此问题，不过滤；公开模板用占位订阅，不做此假设。
+- [X] T029 iOS 正则兼容：个人配置的节点过滤与节点关键字分池在 iOS 上用负向先行断言 `filter: "(?i)^(?!.*…).*$"` 代替 `exclude-filter`，其余平台用 `exclude-filter`。
+- [X] T030 订阅节点过滤仅个人配置的备订阅需要：过滤 `香港|HK|HongKong|Hong Kong|过滤|剩余|套餐`（备订阅有假节点、香港节点不好用）；主订阅无此问题，不过滤；公开模板用占位订阅，不做此假设。
 - [X] T031 移动端场景裁剪：iOS/Android 去 `game_download`（不做 Steam/Epic 下载）；iOS 另去 CDN IP 层 1033 条 CIDR 以守 15 MB 内存约束，Android 保留。`microsoft` 四平台均保留。
 - [X] T032 Docker 定位为 NAS 上的局域网代理（供游戏机、电视、手机），非 TUN、`allow-lan: true`、控制器 `0.0.0.0:9090`；保留 `game_download`；无 Desktop 个人例外。
 - [X] T033 Docker 开 `sniffer.override-destination: true`：无 TUN 时局域网设备常直连 IP，需从 TLS SNI 反推域名才能命中 `game_download`，否则游戏下载会被误翻墙。其余平台保持 `false`（有 TUN + fake-ip）。DNS 保持原样，不影响 fake-ip。
-- [X] T034 模板 AUTO 组简化：不按节点协议类型拆分（老模板按 VLESS/VMess 拆属想当然，协议新旧与纯净/大流量无必然关系），合并为单一 `AUTO` 组。个人配置保留 `AUTO_STRICT` / `AUTO_GENERAL`（按 `YOUR_HEAVY_KEYWORD` 分）+ `AUTO_BACKUP`。
-- [X] T035 重跑 12 份解析与结构检查，并把平台差异矩阵、裁剪依据写入 `validation.md` 与 `README.md`。
+- [X] T034 模板 AUTO 组简化：不按节点协议类型拆分（老模板按 VLESS/VMess 拆属想当然，协议新旧与纯净/大流量无必然关系），合并为单一 `AUTO` 组。个人配置保留 `AUTO_STRICT` / `AUTO_GENERAL`（按节点关键字分）+ `AUTO_BACKUP`。
+- [X] T035 重跑 12 份解析与结构检查，并把平台差异矩阵、裁剪依据写入本地实测台账 `validation.md` 与 `README.md`。
 
 - [X] T036 两轮独立评审的阻塞项修复：①补 `win_update` → `DIRECT`（Desktop/Docker）——`microsoft` 只覆盖 `win-update` 的 358/364，余 6 条共享 CDN 边缘主机（`*.akadns.net`/`*.nsatc.net`）原会被翻墙（5 条经 `+.akadns.net` 进 CDN 层、1 条落 `MATCH,PROXY`），违反「不应翻墙的绝不翻墙」；②Desktop 补 `external-controller: 127.0.0.1:9090`——原取空值实测不启动 RESTful API，CORS 块失效、面板无法切换策略组；③spec 验收 4 按「个人配置/公开模板」分别表述并补决策 8，plan 与 template-contract 同步；④validation 的「全部通过」「20 个 provider」「20 条规则完全一致」改为逐份实测数字；⑤tasks T005 标注 `category-media`/`category-ai-chat-!cn` 后经放宽软门槛重新采用；⑥contract 旧名替换；⑦rule-design 补 `category-game-platforms-download` 判定行、REJECT 代表场景、`win-update` 缺口推演、google/blogspot 与 CDN 交叠计数更正；⑧删 README/rule-design 全局主标题与重复章节；⑨配置注释去品牌名。
 
@@ -81,8 +81,8 @@ description: "001-meta-rules-unification 的实施任务清单"
 - 任务 **39 项全部勾选**，每项均有证据（实测数据、复现命令或文档章节）。
 - 12 份配置全部通过 Mihomo v1.19.32（`mihomo-windows-amd64.exe`）`-t -f` 解析。
 - 三轮独立无上下文复评收到 13 条阻塞项，全部经独立复现后修复；第四轮文档侧与配置侧均 PASS。
-- 实测发现并修复两项设计偏差：`geolocation-cn` 误用为境内域名集合（应为 `cn`，5,385 → 111,224 条）；`AUTO_STRICT`/`AUTO_GENERAL` 误吃两份订阅（应仅 PRIMARY_SUB，与 `AUTO_BACKUP` 互斥）。
-- 已知未测事项与已知软故障均记录在 `validation.md`，未将「未测」记为「通过」。
+- 实测发现并修复两项设计偏差：`geolocation-cn` 误用为境内域名集合（应为 `cn`，5,385 → 111,224 条）；`AUTO_STRICT`/`AUTO_GENERAL` 误吃两份订阅（应仅主订阅，与 `AUTO_BACKUP` 互斥）。
+- 已知未测事项与已知软故障均记录在本地实测台账 `validation.md`，未将「未测」记为「通过」。
 - 一处**已知且无法由顺序解决**的取舍：`gfw` 与三层大流量集合、`cn` 构成三方牵制（`gfw < cn < 大流量 < gfw` 为环），当前采用唯一「零打不开、零境内走代理」的排列，代价是 70 条大流量落 `ROUTE_NORMAL`。推演与三种取舍的代价见 `rule-design.md`，待用户实测后决定是否取另一种。
 
 # 依赖

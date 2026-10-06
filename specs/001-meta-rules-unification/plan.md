@@ -33,7 +33,7 @@ archive/meta-rules-unification-baseline/   # 原 12 份历史配置，只读
 REJECT → DIRECT → ROUTE_NORMAL → ROUTE_HEAVY → MATCH,PROXY
 ```
 
-「不应翻墙的绝不翻墙」是硬约束，DIRECT 判定必须在任何翻墙判定之前。交互型先于大流量切分，使 AI 会话避开 YOUR_HEAVY_KEYWORD 节点。
+「不应翻墙的绝不翻墙」是硬约束，DIRECT 判定必须在任何翻墙判定之前。交互型先于大流量切分，使 AI 会话避开大流量节点。
 
 ## 3. 顺序解决重合
 
@@ -43,7 +43,7 @@ REJECT → DIRECT → ROUTE_NORMAL → ROUTE_HEAVY → MATCH,PROXY
 
 ## 4. 细分是修复不是优化
 
-`category-media` 混了新闻页与视频分片，按宿主内容类型整体归入大流量，接受新闻页走 YOUR_HEAVY_KEYWORD 的软故障——这是放宽规模门槛后的明确取舍，不是疏漏。`category-social-media-!cn` 已含 twimg / twvid，不为 Twitter 单独加规则。
+`category-media` 混了新闻页与视频分片，按宿主内容类型整体归入大流量，接受新闻页走大流量节点的软故障——这是放宽规模门槛后的明确取舍，不是疏漏。`category-social-media-!cn` 已含 twimg / twvid，不为 Twitter 单独加规则。
 
 ## 5. CDN 必须域名层 + IP 层同时加
 
@@ -51,7 +51,7 @@ fake-ip 模式下带 `no-resolve` 的 IP 规则不对域名连接生效。IP 层
 
 ## 6. 策略组
 
-- 公开模板：`ROUTE_NORMAL` 与 `ROUTE_HEAVY` 均 fallback 到单一 `AUTO` 组（全部节点 url-test）。模板用占位订阅，无法预设 `YOUR_HEAVY_KEYWORD` 命名，故不拆节点池；老模板按节点协议类型（VLESS/Trojan vs VMess/HTTP/Socks）拆分属想当然，已去除。
+- 公开模板：`ROUTE_NORMAL` 与 `ROUTE_HEAVY` 均 fallback 到单一 `AUTO` 组（全部节点 url-test）。模板用占位订阅，无法预设节点命名，故不拆节点池；老模板按节点协议类型（VLESS/Trojan vs VMess/HTTP/Socks）拆分属想当然，已去除。
 - 个人配置：`ROUTE_NORMAL: AUTO_STRICT → AUTO_GENERAL → AUTO_BACKUP`；`ROUTE_HEAVY: AUTO_GENERAL → AUTO_STRICT → AUTO_BACKUP`。
 - `AUTO_GENERAL` = `filter: "(?i)YOUR_HEAVY_KEYWORD"`，大流量节点池（仅个人配置）
 - `AUTO_STRICT` = `exclude-filter: "(?i)YOUR_HEAVY_KEYWORD"`，其余节点池（仅个人配置）

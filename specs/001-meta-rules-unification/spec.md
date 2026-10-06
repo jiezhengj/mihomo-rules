@@ -21,7 +21,7 @@
 1. **应当拦截？** 是 → `REJECT`
 2. **需翻墙？** 否 → `DIRECT`。**不应翻墙的绝不翻墙。**
 3. **需翻墙且交互型？** → `ROUTE_NORMAL`，fallback 首选 `AUTO_STRICT`
-4. **需翻墙且大流量？** → `ROUTE_HEAVY`，fallback 首选 `AUTO_GENERAL`（YOUR_HEAVY_KEYWORD 大流量节点）
+4. **需翻墙且大流量？** → `ROUTE_HEAVY`，fallback 首选 `AUTO_GENERAL`（大流量节点池）
 5. **未命中任何规则** → `PROXY` 兜底
 
 # 同质性的两条不同门槛
@@ -59,7 +59,7 @@
 
 # 已确认的设计决策
 
-1. **需翻墙的 media 合并，整体走大流量。** 用 `category-media`（海外 media，与 `geolocation-cn` 零交集）作合并目标，不再拆成 youtube / netflix 等单集合。新闻站点与视频分片在同一集合内交织，调序拆不开，按宿主内容类型整体归入大流量，接受新闻页走 YOUR_HEAVY_KEYWORD 的软故障。
+1. **需翻墙的 media 合并，整体走大流量。** 用 `category-media`（海外 media，与 `geolocation-cn` 零交集）作合并目标，不再拆成 youtube / netflix 等单集合。新闻站点与视频分片在同一集合内交织，调序拆不开，按宿主内容类型整体归入大流量，接受新闻页走大流量节点的软故障。
 
 2. **需翻墙的图片视频 CDN 合并，走大流量。** 域名层 + IP 层同时加。IP 层用 `geoip.cloudflare` / `geoip.cloudfront` / `geoip.fastly`，覆盖「海外站点把图片视频放在 CloudFlare」这种域名规则抓不到的情形；域名层用 `category-cdn-!cn` / `akamai` / `fastly`，因为在 fake-ip 模式下带 `no-resolve` 的 IP 规则不对域名连接生效。
 
@@ -73,7 +73,7 @@
 
 7. **策略组末位兜底。** 4 份个人配置均不设 `AUTO_1` / `AUTO_2`；改为 `AUTO_BACKUP`（`use: [sub_nodes_backup]`）作为独立逃生池，追加在 `PROXY`、`ROUTE_NORMAL`、`ROUTE_HEAVY` 的最后一位。公开双机场模板保留 `AUTO_1` / `AUTO_2`，供 UI 独立切换作逃生。
 
-8. **公开模板的 AUTO 组不按节点协议类型拆分。** 老模板把 `AUTO_STRICT` 限定为 VLESS/Trojan/Snell/Hysteria2、`AUTO_GENERAL` 限定为 VMess/HTTP/Socks，但协议新旧与「纯净/大流量」没有必然关系。故模板合并为单一 `AUTO` 组；个人配置因有真实订阅的 `YOUR_HEAVY_KEYWORD` 节点命名依据，保留 `AUTO_STRICT` / `AUTO_GENERAL` 分池。
+8. **公开模板的 AUTO 组不按节点协议类型拆分。** 老模板把 `AUTO_STRICT` 限定为 VLESS/Trojan/Snell/Hysteria2、`AUTO_GENERAL` 限定为 VMess/HTTP/Socks，但协议新旧与「纯净/大流量」没有必然关系。故模板合并为单一 `AUTO` 组；个人配置因有真实订阅的节点命名依据，保留 `AUTO_STRICT` / `AUTO_GENERAL` 分池。
 
 # 仍需覆盖的大流量类目
 
@@ -96,7 +96,7 @@
 
 因此 `google → ROUTE_NORMAL` 不是冗余：没有它，这 530 条会落到 `MATCH,PROXY`，路由结果取决于 `PROXY` 的手动选择；有了它，全 Google 确定性走干净节点。内容类型以交互为主，保留 `ROUTE_NORMAL`。
 
-已知软故障：`+.2mdn.net`（Google 广告媒体 CDN）与 Google Photos / Drive / 地图瓦片会走 `AUTO_STRICT` 而非 YOUR_HEAVY_KEYWORD。
+已知软故障：`+.2mdn.net`（Google 广告媒体 CDN）与 Google Photos / Drive / 地图瓦片会走 `AUTO_STRICT` 而非大流量池。
 
 # 策略组命名
 
@@ -110,7 +110,7 @@
 | 旧名 | 新名 | 中文 | 语义 |
 |---|---|---|---|
 | `ROUTE_AI` | `ROUTE_NORMAL` | 普通流量 | 交互型、非大流量，首选 `AUTO_STRICT` |
-| `ROUTE_GLOBAL` | `ROUTE_HEAVY` | 大流量 | 持续大载荷，首选 `AUTO_GENERAL`（YOUR_HEAVY_KEYWORD） |
+| `ROUTE_GLOBAL` | `ROUTE_HEAVY` | 大流量 | 持续大载荷，首选 `AUTO_GENERAL`（大流量节点池） |
 
 命名直接编码判定链的分类轴（是不是大流量），并延续历史词汇「普通 / 大流量」，与 `AUTO_STRICT`(纯净节点) / `AUTO_GENERAL`(大流量节点) 的分工不撞名。
 
@@ -153,7 +153,7 @@
 3. 业务规则只指向 `REJECT` / `DIRECT` / `ROUTE_NORMAL` / `ROUTE_HEAVY`，不直连 `AUTO_*`。
 4. 候选链按配置类型区分，均只引用各自文件中实际定义的组：
    - **4 份个人配置**：`ROUTE_NORMAL` 候选 `AUTO_STRICT → AUTO_GENERAL → AUTO_BACKUP`，`ROUTE_HEAVY` 为 `AUTO_GENERAL → AUTO_STRICT → AUTO_BACKUP`，`AUTO_BACKUP` 恒在末位。
-   - **8 份公开模板**：**不设 ROUTE 层**。只有一个 `AUTO` 节点池，业务规则直接指向它，`PROXY` 作手动逃生口兼最终兜底。模板只有一个池，普通流量与大流量落到同一组，再包 `ROUTE_NORMAL` / `ROUTE_HEAVY` 只是纯转发；模板用占位订阅也无法预设 `YOUR_HEAVY_KEYWORD` 节点命名。老模板按节点协议类型拆分属想当然，已去除（见决策 8）。若日后拆出两个池，再把规则改指 `ROUTE_*`。
+   - **8 份公开模板**：**不设 ROUTE 层**。只有一个 `AUTO` 节点池，业务规则直接指向它，`PROXY` 作手动逃生口兼最终兜底。模板只有一个池，普通流量与大流量落到同一组，再包 `ROUTE_NORMAL` / `ROUTE_HEAVY` 只是纯转发；模板用占位订阅也无法预设节点命名。老模板按节点协议类型拆分属想当然，已去除（见决策 8）。若日后拆出两个池，再把规则改指 `ROUTE_*`。
 5. `MATCH,PROXY` 是每份配置的最后一条。
 6. 公开模板不含个人订阅、节点、私有策略组或内网字段；个人配置及个人归档均被 Git 忽略。
 7. 每个进入配置的资源都有同质性判定依据，包括被弃用资源的理由。

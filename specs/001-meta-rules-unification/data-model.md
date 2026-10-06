@@ -18,7 +18,7 @@
 需要代理的非大流量操作可作为 `ROUTE_NORMAL` 基准；需要代理的大流量操作可作为 `ROUTE_HEAVY` 基准。候选链按配置类型区分，且只列出该配置实际定义的候选组：
 
 - **4 份个人配置**：`ROUTE_NORMAL: AUTO_STRICT → AUTO_GENERAL → AUTO_BACKUP`；`ROUTE_HEAVY: AUTO_GENERAL → AUTO_STRICT → AUTO_BACKUP`。`AUTO_BACKUP` 为末位逃生候选。
-- **8 份公开模板**：不拆节点池，`ROUTE_NORMAL` 与 `ROUTE_HEAVY` 均 fallback 到单一 `AUTO` 组。模板用占位订阅，无法预设 `YOUR_HEAVY_KEYWORD` 之类的节点命名；老模板按节点协议类型拆分的做法已废弃。
+- **8 份公开模板**：不拆节点池，`ROUTE_NORMAL` 与 `ROUTE_HEAVY` 均 fallback 到单一 `AUTO` 组。模板用占位订阅，无法预设节点关键字之类的节点命名；老模板按节点协议类型拆分的做法已废弃。
 
 策略组名称不代表业务类别。维护者须点名 REJECT 样例和依据后，该路径才可记为已验证。Desktop 游戏内容、补丁或分发切片下载按通用操作范围审阅 DIRECT 意图与规则组覆盖，不另设服务品牌验收项或例外。
 
