@@ -7,7 +7,7 @@
 
 这并不是什么庞大复杂的工程，而是我个人实践出的一套**「白名单模式 + 智能兜底」**的配置模板集合。
 
-为兼顾不同用户的机场订阅情况，仓库提供 **8 份配置模板**（4 种设备环境 × 单机场 / 双机场）。设计依据与逐项数据见 [rule-design.md](rule-design.md)。
+为兼顾不同用户的机场订阅情况，仓库提供 **8 份配置模板**（4 种设备环境 × 单机场 / 双机场）。
 
 # 一、配置适用设备与版本矩阵
 
@@ -80,7 +80,7 @@ external-controller-cors:
 
 准入判据是**同质性**：同质性不通过的一律不进。`DIRECT`↔`ROUTE_*` 搞错是**硬故障**，门槛严格；`ROUTE_NORMAL`↔`ROUTE_HEAVY` 搞错是**软故障**，按宿主内容类型判，门槛放宽。
 
-注意「规则集」是宽泛说法——实际取用的是 geo/geosite、geoip、categories 等各形态中**覆盖最全且同质**的那一个，不是只看规则集形态。完整的资源取舍与交叠数据见 [rule-design.md](rule-design.md)。
+注意「规则集」是宽泛说法——实际取用的是 geo/geosite、geoip、categories 等各形态中**覆盖最全且同质**的那一个，不是只看规则集形态。
 
 # 四、规则顺序（22 个规则资源）
 
@@ -115,7 +115,7 @@ external-controller-cors:
 *   **`win_update` 必须单列**：`microsoft` 只覆盖 `win-update` 的 358/364 条，余 6 条挂在共享 CDN 边缘域名下会被推去代理。移动端不引入。
 *   **CDN 层在 `gfw` 之后**：代价是 6 个 CDN 边缘主机落 `ROUTE_NORMAL`，属已知软故障。
 
-> **一处顺序无法解决的三方牵制**：`gfw`、`cn`、三层大流量集合构成环，任何线性排列都必须放弃一条。当前采用唯一「零打不开、零境内走代理」的排列，代价是 70 条大流量落 `ROUTE_NORMAL`。完整推演与三种取舍的代价见 [rule-design.md](rule-design.md)「顺序无法彻底解决的三方牵制」，待实测后裁定。
+> **一处顺序无法解决的三方牵制**：`gfw`、`cn`、三层大流量集合构成环，任何线性排列都必须放弃一条。当前采用唯一「零打不开、零境内走代理」的排列，代价是 70 条大流量落 `ROUTE_NORMAL`。待实测后裁定。
 
 # 五、策略组
 
@@ -211,7 +211,6 @@ iOS 目标客户端是 **Stash**，不是 Mihomo。它与 Mihomo 在几处不兼
 
 *   **[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)**：本仓库全部 22 个规则资源的唯一直接来源，固定 commit `cb3e075`，以独立 provider 形态逐个引用，可逐个追溯版本。
 
-（其上游数据来自哪些社区项目、如何中转，见 [rule-design.md](rule-design.md) 的上游说明。）
 
 # 十、致 AI Agent（智能体）的使用指南
 

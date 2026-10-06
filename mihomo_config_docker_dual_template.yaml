@@ -6,7 +6,6 @@
 #   3. 需翻墙 + 普通流量？-> AUTO   4. 需翻墙 + 大流量？-> AUTO
 #   5. 其余 -> MATCH,PROXY
 #
-# 资源同质性判定见同目录 rule-design.md。
 
 mixed-port: 7890
 allow-lan: true
