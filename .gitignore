@@ -14,6 +14,11 @@ validation.md
 \n
 /.agent-state/spec_kit_component_update_cache.json
 
+# 本地恢复副本与测试产物可能包含个人配置，不得提交
+/.agent-state/backups/
+/.agent-state/steam-fix-verification/
+/.agent-state/verify_steam_runtime.py
+
 # Spec Kit 运行时缓存与 Python 字节码
 .specify/**/.cache/
 __pycache__/

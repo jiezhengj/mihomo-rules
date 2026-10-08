@@ -121,7 +121,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-ads-all.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.mrs"
     path: ./rule_providers/category-ads-all.mrs
     interval: 86400
   # —— 不翻墙 ——
@@ -129,21 +129,21 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/private.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"
     path: ./rule_providers/private-domain.mrs
     interval: 86400
   private_ip:
     type: http
     behavior: ipcidr
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/private.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs"
     path: ./rule_providers/private-ip.mrs
     interval: 86400
   geo_cn_ip:
     type: http
     behavior: ipcidr
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/cn.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"
     path: ./rule_providers/geo-cn-ip.mrs
     interval: 86400
   # 国内可用系统服务
@@ -151,7 +151,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/apple.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs"
     path: ./rule_providers/apple.mrs
     interval: 86400
   # 国内可用系统服务
@@ -159,7 +159,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/microsoft.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs"
     path: ./rule_providers/microsoft.mrs
     interval: 86400
   # Windows 更新与推送。microsoft 只覆盖 358/364，余 6 条共享 CDN 边缘主机（*.akadns.net / *.nsatc.net）需单列
@@ -167,7 +167,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/win-update.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/win-update.mrs"
     path: ./rule_providers/win-update.mrs
     interval: 86400
   # 境内域名全集，含 +.cn 等注册域（非 geolocation-cn 那个窄集合）
@@ -175,7 +175,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/cn.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"
     path: ./rule_providers/cn.mrs
     interval: 86400
   # —— 需翻墙 + 普通流量 ——
@@ -183,14 +183,14 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-ai-chat-!cn.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.mrs"
     path: ./rule_providers/ai-chat.mrs
     interval: 86400
   google:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/google.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"
     path: ./rule_providers/google.mrs
     interval: 86400
   # —— 需翻墙 + 大流量 ——
@@ -198,7 +198,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-media.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-media.mrs"
     path: ./rule_providers/media.mrs
     interval: 86400
   # 社交图片视频（含 twimg / twvid / fbcdn）
@@ -206,7 +206,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-social-media-!cn.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-social-media-!cn.mrs"
     path: ./rule_providers/social-media.mrs
     interval: 86400
   # 网盘与文件同步
@@ -214,7 +214,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-netdisk-!cn.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-netdisk-!cn.mrs"
     path: ./rule_providers/netdisk.mrs
     interval: 86400
   # —— 需翻墙主体 ——
@@ -222,7 +222,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/gfw.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gfw.mrs"
     path: ./rule_providers/gfw.mrs
     interval: 86400
   # —— 游戏分发下载（移动端不做桌面游戏平台下载，不引入）——
@@ -230,7 +230,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-game-platforms-download.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-game-platforms-download.mrs"
     path: ./rule_providers/game-download.mrs
     interval: 86400
   # 补 game_download 的覆盖缺口：后者只收 cloudflare.epicgamescdn.com，漏掉绝大多数分发子域。含 1 条受限成员，由前置规则捞走
@@ -238,7 +238,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/epicgames.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/epicgames.mrs"
     path: ./rule_providers/epic-platform.mrs
     interval: 86400
   # —— CDN 静态/媒体（域名层）——
@@ -246,21 +246,21 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-cdn-!cn.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-cdn-!cn.mrs"
     path: ./rule_providers/cdn-nc.mrs
     interval: 86400
   cdn_akamai:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/akamai.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/akamai.mrs"
     path: ./rule_providers/cdn-akamai.mrs
     interval: 86400
   cdn_fastly:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/fastly.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/fastly.mrs"
     path: ./rule_providers/cdn-fastly.mrs
     interval: 86400
   # —— CDN IP 层（iOS 因 15MB 内存约束不引入）——
@@ -268,22 +268,31 @@ rule-providers:
     type: http
     behavior: ipcidr
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/cloudflare.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cloudflare.mrs"
     path: ./rule_providers/cdn-ip-cloudflare.mrs
     interval: 86400
   cdn_ip_cloudfront:
     type: http
     behavior: ipcidr
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/cloudfront.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cloudfront.mrs"
     path: ./rule_providers/cdn-ip-cloudfront.mrs
     interval: 86400
   cdn_ip_fastly:
     type: http
     behavior: ipcidr
     format: mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/fastly.mrs"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/fastly.mrs"
     path: ./rule_providers/cdn-ip-fastly.mrs
+    interval: 86400
+
+  # Steam 剩余流量：前面的代理规则保留商店、社区网页和视频出口。
+  steam:
+    type: http
+    behavior: domain
+    format: mrs
+    path: ./rule_providers/steam.mrs
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs"
     interval: 86400
 
 rules:
@@ -345,4 +354,6 @@ rules:
   - RULE-SET,cdn_ip_cloudfront,AUTO,no-resolve
   - RULE-SET,cdn_ip_fastly,AUTO,no-resolve
   # 10) 兜底
+  # 已接受剩余 Steam 业务直连；置于所有既有规则之后。
+  - RULE-SET,steam,DIRECT
   - MATCH,PROXY
