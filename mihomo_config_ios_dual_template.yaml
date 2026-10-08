@@ -103,107 +103,107 @@ rule-providers:
   category_ads_all:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-ads-all.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.yaml"
     path: ./rule_providers/category-ads-all.yaml
     interval: 86400
   # —— 不翻墙 ——
   private_domain:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/private.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.yaml"
     path: ./rule_providers/private-domain.yaml
     interval: 86400
   private_ip:
     type: http
     behavior: ipcidr
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/private.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.yaml"
     path: ./rule_providers/private-ip.yaml
     interval: 86400
   geo_cn_ip:
     type: http
     behavior: ipcidr
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geoip/cn.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.yaml"
     path: ./rule_providers/geo-cn-ip.yaml
     interval: 86400
   # 国内可用系统服务
   apple:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/apple.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.yaml"
     path: ./rule_providers/apple.yaml
     interval: 86400
   # 国内可用系统服务
   microsoft:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/microsoft.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.yaml"
     path: ./rule_providers/microsoft.yaml
     interval: 86400
   # 境内域名全集，含 +.cn 等注册域（非 geolocation-cn 那个窄集合）
   cn:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/cn.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.yaml"
     path: ./rule_providers/cn.yaml
     interval: 86400
   # —— 需翻墙 + 普通流量 ——
   ai_chat:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-ai-chat-!cn.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.yaml"
     path: ./rule_providers/ai-chat.yaml
     interval: 86400
   google:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/google.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.yaml"
     path: ./rule_providers/google.yaml
     interval: 86400
   # —— 需翻墙 + 大流量 ——
   media:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-media.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-media.yaml"
     path: ./rule_providers/media.yaml
     interval: 86400
   # 社交图片视频（含 twimg / twvid / fbcdn）
   social_media_nc:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-social-media-!cn.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-social-media-!cn.yaml"
     path: ./rule_providers/social-media.yaml
     interval: 86400
   # 网盘与文件同步
   netdisk_nc:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-netdisk-!cn.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-netdisk-!cn.yaml"
     path: ./rule_providers/netdisk.yaml
     interval: 86400
   # —— 需翻墙主体 ——
   gfw:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/gfw.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gfw.yaml"
     path: ./rule_providers/gfw.yaml
     interval: 86400
   # —— CDN 静态/媒体（域名层）——
   cdn_nc:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/category-cdn-!cn.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-cdn-!cn.yaml"
     path: ./rule_providers/cdn-nc.yaml
     interval: 86400
   cdn_akamai:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/akamai.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/akamai.yaml"
     path: ./rule_providers/cdn-akamai.yaml
     interval: 86400
   cdn_fastly:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/cb3e075825906a4dcc2feff84e3d6cc5691d9416/geo/geosite/fastly.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/fastly.yaml"
     path: ./rule_providers/cdn-fastly.yaml
     interval: 86400
 

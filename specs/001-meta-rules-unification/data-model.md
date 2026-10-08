@@ -27,7 +27,7 @@
 | 字段 | 含义 | 校验约束 |
 | --- | --- | --- |
 | `resource_id` | 本设计内稳定引用 | 唯一；避免将旧 provider 标识机械改名后充当新设计依据 |
-| `source` / `revision` | 上游仓库与固定版本 | 可复现；上游更新必须显式审阅 |
+| `source` / `revision` | 唯一上游仓库与持续发布分支 | 运行时使用 `meta` 发布分支并定时刷新；禁止锁定 commit、日期快照或不可更新的 tag |
 | `resource_path` | 资源路径或数据库类别标识 | 必须在对应发布形态中存在 |
 | `match_space` | domain、IP/CIDR 或 Mihomo Geo* 数据库对象 | 与 `behavior` 和配置匹配语义一致 |
 | `format` | `yaml`、`text`、`mrs` 或适用的内置数据库形态 | 与 Mihomo 支持的 provider 类型匹配，不由扩展名单独推断 |

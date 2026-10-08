@@ -1,7 +1,7 @@
 # 研究范围与基线
 
 - Feature：`001-meta-rules-unification`，分支标识 `001-meta-rules-unification`。
-- 规则数据复核基线：MetaCubeX `meta-rules-dat` commit `cb3e075825906a4dcc2feff84e3d6cc5691d9416`；对应 README commit `4178770badecb1b349fbcd62c737e0d7a2079729`。采用固定提交可复现本次资源审阅。实现阶段若上游已有更新，应先审阅差异，再决定是否更新基线；不得静默切换。
+- 规则数据复核基线：MetaCubeX `meta-rules-dat` commit `cb3e075825906a4dcc2feff84e3d6cc5691d9416`；对应 README commit `4178770badecb1b349fbcd62c737e0d7a2079729`。这是当时审阅的数据记录。运行时规则订阅必须跟随 `meta` 发布分支持续更新，禁止将此 commit 写入订阅 URL；本次计数和交叠结论不能代替更新后验证。
 - Mihomo 行为参考基线：Assessment 已审阅的 commit `88dcbf7f1614a67c3b36b848ee3592dfa92ada36`。规划时通过 `gh` 查询到稳定发布为 `v1.19.32`（2026-09-30 发布）。最终配置检查须使用实施时明确记录的 Mihomo 版本；若核心版本与研究基线不一致，应复核 provider 格式和规则语义。
 - 仓库现有配置布局为根目录的 8 个公开模板及 4 个 `.gitignore` 忽略的个人配置。规划提出将新矩阵放入 ``，旧基线存入 `archive/meta-rules-unification-baseline/`；实施时必须先保证个人文件和归档副本继续受忽略规则保护，再进行复制或移动。
 - 项目没有应用程序源码、测试套件或独立服务接口。本 Feature 的交付物是 Mihomo YAML 配置及说明文档；Mihomo 核心负责解析和运行配置。
@@ -51,7 +51,7 @@
 # 已处理的计划阶段未知项
 
 - 拦截、代理及规模的判断顺序已在 Spec 明确；Desktop 游戏内容下载的 `DIRECT` 预期按通用操作范围审阅，不构成服务品牌分类或优先级。`REJECT` 的具体样例和依据须在后续规则设计记录中由维护者确定。
-- 上游审阅使用 Assessment 已固定的 commit；后续若要跟进上游，须显式复核差异。
+- 运行时必须订阅上游持续发布分支并定时刷新；验收记录实际下载的数据与关键路由结果，不设置每次更新需人工批准的阻断条件。
 - 公开/个人平台矩阵与私有规则范围由宪章及 Spec 确定。私人订阅和节点等具体值不写入 Feature 文档或公开模板。
 - `` 与 `archive/meta-rules-unification-baseline/` 是计划采用的文件布局，不改变当前文件；实施前须确认 4 个个人文件及归档副本保持 Git 忽略。
 - Feature 不定义新的公共 API、数据库、网络服务或应用运行时；Mihomo 配置文件本身是面向模板使用者的文件接口，其结构与路由行为约束写入 `contracts/template-contract.md`。

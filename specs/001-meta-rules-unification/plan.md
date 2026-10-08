@@ -10,7 +10,7 @@
 
 **核心**: Mihomo Meta v1.19.32（Windows amd64），用于 `-t -f` 解析验证。
 
-**上游**: MetaCubeX `meta-rules-dat`，固定 commit `cb3e075825906a4dcc2feff84e3d6cc5691d9416`。采用 `geo/geosite/*.mrs` 与 `geo/geoip/*.mrs` 独立 provider 形态，逐个固定 URL，可对单个类别追溯版本。
+**上游**: 唯一来源为 MetaCubeX `meta-rules-dat`。独立 `geo/geosite`、`geo/geoip` provider 必须订阅 `meta` 持续发布分支并按 `interval: 86400` 刷新，禁止锁死 commit、日期快照或不可更新的 tag。Mihomo 使用适用 MRS，Stash 使用适用 YAML；逐项核查资源路径、格式和刷新加载。
 
 **布局**:
 

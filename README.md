@@ -62,7 +62,7 @@ external-controller-cors:
 
 ## 差异考量详解
 
-1. **iOS 按 Stash 适配**：iOS 平台客户端生态复杂，Stash 的规则集格式是 `payload:` YAML 而非 Mihomo 专有 `.mrs`，故三份 iOS 配置的 provider URL 全部换用 `.yaml`（同一 commit、同一数据）。同时去掉 `sniffer` 与 `tun` 块、把 QUIC 逻辑规则注释保留（`AND,…` 是否被 Stash 支持未证实）。节点过滤改用负向先行断言，与查官方文档得到的写法一致。
+1. **iOS 按 Stash 适配**：iOS 平台客户端生态复杂，Stash 的规则集格式是 `payload:` YAML 而非 Mihomo 专有 `.mrs`，故三份 iOS 配置的 provider URL 全部换用 `.yaml`（同一 `meta` 发布分支、同源数据）。同时去掉 `sniffer` 与 `tun` 块、把 QUIC 逻辑规则注释保留（`AND,…` 是否被 Stash 支持未证实）。节点过滤改用负向先行断言，与查官方文档得到的写法一致。
 2. **移动端内存壁垒**：iOS Network Extension 有 15MB Jetsam 内存红线，规则膨胀会触发后台静默崩溃。手机端不存在主机游戏下载等重型场景，故移动端统一剔除 `game_download`、`epic_platform`、`win_update`，iOS 另剔除 CDN IP 层。
 3. **Desktop 的性能与游戏保障**：桌面端采用 mixed 协议栈（TCP 系统原生、UDP gvisor），保障大文件高带宽传输同时降低系统开销；集成游戏分发切片直连，下载跑满本地带宽且不耗代理流量。
 4. **Docker 的局域网定位**：Docker 运行在 NAS 或家庭服务器，关闭了破坏宿主机网络的 TUN。为解决局域网设备发纯 IP 请求导致国内 CDN 误判走代理的问题，同步启用 Sniffer 嗅探重建主机名，`override-destination` 设为 `true`。
@@ -209,7 +209,7 @@ iOS 目标客户端是 **Stash**，不是 Mihomo。它与 Mihomo 在几处不兼
 
 本配置只列**直接来源**——所有规则资源都从这一个仓库取用，没有第二个直连来源：
 
-*   **[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)**：本仓库全部 22 个规则资源的唯一直接来源，固定 commit `cb3e075`，以独立 provider 形态逐个引用，可逐个追溯版本。
+*   **[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)**：本仓库规则资源的唯一直接来源，以独立 provider 订阅 `meta` 发布分支，每 86400 秒刷新，不锁定旧版本。Desktop/Docker 使用 23 个 provider，Android 使用 19 个，iOS 使用 16 个。
 
 
 # 十、致 AI Agent（智能体）的使用指南
