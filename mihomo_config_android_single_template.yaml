@@ -250,6 +250,8 @@ rules:
 
   # 4) 需翻墙主体 -> AUTO
   - RULE-SET,gfw,AUTO
+  #    google 必须在 cn 之前：确保 GMS (services.googleapis.cn) 走代理以获取海外正常 CDN 分发，避免调度至国内电信内网缓存节点引发下载挂起。
+  - RULE-SET,google,AUTO
 
   # 5) 境内域名 -> DIRECT
   #    必须在 gfw 之后：gfw 有 22 条受限站点被 cn 覆盖（futu.cn / longbridge.cn / google.cn 等）。
@@ -257,9 +259,8 @@ rules:
   - RULE-SET,cn,DIRECT
 
   # 6) 需翻墙 + 普通流量 -> AUTO（首选纯净节点）
-  #    排在 cn 之后：google 有 15 条 -cn 国内基建应直连。
+  #    ai_chat 排在 cn 之后：确保 kimi / moonshot 等中国本土 AI 服务保持直连。
   - RULE-SET,ai_chat,AUTO
-  - RULE-SET,google,AUTO
 
   # 7) 需翻墙 + 大流量 -> AUTO
   - RULE-SET,media,AUTO
