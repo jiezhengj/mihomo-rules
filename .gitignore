@@ -21,3 +21,9 @@ validation.md
 specs/
 __pycache__/
 .wrangler/
+
+# 订阅分发工具构建产物与临时私有配置
+tools/subscription/worker/node_modules/
+tools/subscription/worker/.cloudflare/
+tools/subscription/worker/dist/
+tools/subscription/worker/public/
