@@ -20,3 +20,4 @@ validation.md
 .specify/
 specs/
 __pycache__/
+.wrangler/
