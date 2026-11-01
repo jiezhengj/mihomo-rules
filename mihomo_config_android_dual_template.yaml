@@ -88,9 +88,10 @@ proxy-groups:
       - sub_nodes_2
 
   # 节点池，自动选优。业务规则直接指向它。
-  # 模板只有一个池，故不设 AUTO / AUTO 中间层——两个都指向同一池是冗余。
-  # 若订阅有大流量节点池（按节点名识别），参照个人配置拆成 AUTO_STRICT / AUTO_GENERAL，
-  # 再把规则改指 AUTO / AUTO。
+  # 模板只有一个池，故不设 ROUTE_NORMAL / ROUTE_HEAVY 中间层——两者都指向同一池，只是纯转发。
+  # 若订阅有大流量节点池或 AI 优化出口（按节点名识别），可参照个人配置拆出
+  # AUTO_NORMAL / AUTO_HEAVY / AUTO_AI 三个池，再把规则改指对应的组；
+  # AI 业务可另建 ROUTE_AI，按「AI 出口 → 普通池 → 大流量池 → 逃生池」排序。
   - name: AUTO
     type: url-test
     use:
@@ -114,7 +115,7 @@ proxy-groups:
     url: http://www.gstatic.com/generate_204
     interval: 300
 
-# 以下资源全部取自 MetaCubeX/meta-rules-dat，固定到同一 commit
+# 以下资源全部取自 MetaCubeX/meta-rules-dat（meta 发布分支，interval 86400 持续更新）
 rule-providers:
   # —— 拦截 ——
   category_ads_all:
@@ -287,7 +288,10 @@ rules:
   - RULE-SET,cn,DIRECT
 
   # 6) 需翻墙 + 普通流量 -> AUTO（首选纯净节点）
-  #    ai_chat 排在 cn 之后：确保 kimi / moonshot 等中国本土 AI 服务保持直连。
+  #    ai_chat 排在 cn 之后：集合里有 +.kimi.ai / +.moonshot.ai / +.minimax.io / +.qoder.com
+  #    同时被 cn 覆盖，排在后面才能让这几条境内 AI 域名保持直连。
+  #    若某些 AI 站点需要专用出口，可另建 AUTO_AI + ROUTE_AI 并把本行改指 ROUTE_AI，
+  #    代价是上述 4 条境内 AI 域名会跟着改走代理（个人配置就是这么取舍的）。
   - RULE-SET,ai_chat,AUTO
 
   # 7) 需翻墙 + 大流量 -> AUTO
