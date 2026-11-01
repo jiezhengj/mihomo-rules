@@ -1,24 +1,22 @@
-mihomo_config_desktop.yaml
-mihomo_config_android.yaml
-mihomo_config_ios.yaml
-mihomo_config_docker.yaml
+# 个人私有配置、设计文档与实测台账：独立私有仓库（private/.git），主仓整体忽略
+# 内容含个人订阅、节点凭据与环境细节，永久不进公开仓库
+private/
+
+# 临时配置与本地设计草稿
 mihomo_config_ios_temp.yaml
 mihomo_config_docker_temp.yaml
 mihomo_config_android_temp.yaml
 LOCAL_ARCH_DESIGN.md
 
-# 个人设计文档与实测台账：含个人环境/订阅细节，仅本地保存，不进入公开仓库
-rule-design.md
-validation.md
+# Syncthing 跨机同步产生的冲突副本
+**/*.sync-conflict-*
 
 .DS_Store
 
 # 运行时状态、缓存与测试产物
 /.agent-state/
 
-# Spec Kit 本地工作区与规格工件：含个人环境/测试细节，仅本地保存，不进入公开仓库
-.specify/
-specs/
+# 运行时缓存与构建产物
 __pycache__/
 .wrangler/
 
@@ -27,3 +25,4 @@ tools/subscription/worker/node_modules/
 tools/subscription/worker/.cloudflare/
 tools/subscription/worker/dist/
 tools/subscription/worker/public/
+tools/subscription/worker/src/configs.ts
