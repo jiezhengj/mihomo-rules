@@ -52,7 +52,7 @@
 **当用户要求“同步更新全网终端”、“发布配置”、“同步到各端”或类似指令时，Agent 必须直接在项目根目录下运行发布工具，主动代为完成多端打包、云端部署与家庭 NAS 内网直推热重载，严禁要求用户手动执行该命令：**
 
 ~~~bash
-python3 tools/subscription/publish.py
+python3 private/tools/subscription/publish.py
 ~~~
 
 - **全自动执行闭环**：

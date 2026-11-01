@@ -19,10 +19,3 @@ LOCAL_ARCH_DESIGN.md
 # 运行时缓存与构建产物
 __pycache__/
 .wrangler/
-
-# 订阅分发工具构建产物与临时私有配置
-tools/subscription/worker/node_modules/
-tools/subscription/worker/.cloudflare/
-tools/subscription/worker/dist/
-tools/subscription/worker/public/
-tools/subscription/worker/src/configs.ts
