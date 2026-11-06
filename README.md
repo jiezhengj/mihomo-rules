@@ -42,6 +42,7 @@
 | **QUIC 阻断（`AND,…` 逻辑规则）** | ✅ 启用 | ✅ 启用 | ⚠️ 注释保留，待实测 | ✅ 启用 |
 | **游戏下载直连** | ✅ 包含 | ⚪ 剔除 | ⚪ 剔除 | ✅ 包含 |
 | **Steam 剩余流量直连（`steam`）** | ✅ 包含 | ⚪ 剔除 | ⚪ 剔除 | ✅ 包含 |
+| **Spotify 播放链路直连（`spotify`）** | ✅ 包含（账号仍走代理） | ✅ 包含 | ✅ 包含 | ✅ 包含 |
 | **Windows 更新直连（`win_update`）** | ✅ 包含 | ⚪ 剔除 | ⚪ 剔除 | ✅ 包含 |
 | **CDN 边缘 IP 层（快照计 1033 条 CIDR）** | ✅ 包含 | ✅ 包含 | ⚪ 剔除（守 15MB 内存红线） | ✅ 包含 |
 | **节点过滤** | ✅ `filter` / `exclude-filter` | ✅ 同左 | ✅ 组级同左；订阅级用负向先行断言 | ✅ `filter` / `exclude-filter` |
@@ -90,11 +91,11 @@ AI 层不是新的内容类型，而是一条**可达性约束**：AI 会话本�
 
 注意「规则集」是宽泛说法——实际取用的是 geo/geosite、geoip、categories 等各形态中**覆盖最全且同质**的那一个，不是只看规则集形态。
 
-8 份公开模板没有 AI 层与 `ROUTE_*` 层，规则顺序仍是旧版 `gfw → google → cn → ai_chat`，业务规则统一指向 `AUTO`；本节的六步链描述的是 4 份个人配置。
+8 份公开模板没有 AI 层与 `ROUTE_*` 层，规则顺序是 `gfw → spotify → google → cn → ai_chat`，业务规则统一指向 `AUTO`；本节的六步链描述的是 4 份个人配置。
 
-# 四、规则顺序（23 个规则资源）
+# 四、规则顺序（24 个规则资源）
 
-4 份个人配置的规则顺序如下。Desktop / Docker 共 23 个规则资源；Android 19 个（去 `game_download`、`epic_platform`、`win_update`、`steam`）；iOS 16 个（再去 CDN IP 层）。
+4 份个人配置的规则顺序如下。Desktop / Docker 共 24 个规则资源；Android 20 个（去 `game_download`、`epic_platform`、`win_update`、`steam`）；iOS 17 个（再去 CDN IP 层）。
 
 ```
  1. category_ads_all                  -> REJECT
@@ -105,15 +106,16 @@ AI 层不是新的内容类型，而是一条**可达性约束**：AI 会话本�
  5. QUIC: UDP 且目标端口 443          -> REJECT
  6. ai_chat                           -> ROUTE_AI
  7. gfw                               -> ROUTE_NORMAL
- 8. google                            -> ROUTE_NORMAL
- 9. cn                                -> DIRECT
-10. media / social_media_nc / netdisk_nc -> ROUTE_HEAVY
-11. game_download / epic_platform     -> DIRECT   （仅 Desktop / Docker）
-12. apple / microsoft / win_update    -> DIRECT   （win_update 仅 Desktop / Docker）
-13. cdn_nc / cdn_akamai / cdn_fastly  -> ROUTE_HEAVY
+ 8. spotify                           -> DIRECT
+ 9. google                            -> ROUTE_NORMAL
+10. cn                                -> DIRECT
+11. media / social_media_nc / netdisk_nc -> ROUTE_HEAVY
+12. game_download / epic_platform     -> DIRECT   （仅 Desktop / Docker）
+13. apple / microsoft / win_update    -> DIRECT   （win_update 仅 Desktop / Docker）
+14. cdn_nc / cdn_akamai / cdn_fastly  -> ROUTE_HEAVY
     cdn_ip_{cloudflare,cloudfront,fastly} -> ROUTE_HEAVY (no-resolve；iOS 不含)
-14. steam                            -> DIRECT   （仅 Desktop / Docker）
-15. MATCH,PROXY                      -> 兜底
+15. steam                            -> DIRECT   （仅 Desktop / Docker）
+16. MATCH,PROXY                      -> 兜底
 ```
 
 规则顺序不是随手排的，几处关键取舍：
@@ -125,6 +127,7 @@ AI 层不是新的内容类型，而是一条**可达性约束**：AI 会话本�
 *   **游戏下载在 `gfw` 之后、CDN 之前**：集合里的共享 CDN 边缘主机需代理，让 `gfw` 先命中；而 CDN 集合会吞掉其 10 个成员，所以 CDN 层必须在其后。
 *   **`win_update` 必须单列**：`microsoft` 只覆盖 `win-update` 的 358/364 条，余 6 条挂在共享 CDN 边缘域名下会被推去代理。移动端不引入。
 *   **CDN 层在 `gfw` 之后**：代价是 6 个 CDN 边缘主机落 `ROUTE_NORMAL`，属已知软故障。
+*   **`spotify` 紧跟 `gfw`**：Spotify 免费版每 14 天校验一次登录地，非流媒体部分必须从大陆外出口出去，而播放链路（`scdn.co` / `spotifycdn.com` / akamaized 音频主机）本身大陆可直连。`gfw` 里的 `+.spotify.com` 先接走账号与校验，`spotify` 只接漏下的播放 CDN → `DIRECT`，不再白耗机场流量。代价是集合内 12 条营销/短链域名也一并直连。
 *   **`steam` 置于最后**：Desktop / Docker 在全部既有规则之后、`MATCH` 之前加 `RULE-SET,steam,DIRECT`，让商店、社区、视频等既已被前面规则接走的流量保持原出口，只把剩余的下载/用户内容接成直连。
 
 > **一处顺序无法解决的三方牵制**：`gfw`、`cn`、大流量层构成环，任何线性排列都必须放弃一条。当前采用 `gfw → cn → 大流量`，是唯一「零打不开、零境内走代理」的排列，代价是 70 条大流量落 `ROUTE_NORMAL`。AI 层排在这条环之前，不改变该结论。
@@ -270,7 +273,7 @@ iOS 目标客户端是 **Stash**，不是 Mihomo。它与 Mihomo 在几处不兼
 | QUIC 阻断 `AND,(…)` | 启用 | **注释保留**，Stash 支持与否未证实 |
 | 节点过滤 | `filter` / `exclude-filter` | 组级同左；订阅级用负向先行断言 |
 
-iOS 的规则资源为 16 个（比 Docker 少 `game_download`、`epic_platform`、`win_update`、`steam` 与 3 个 CDN IP provider）。
+iOS 的规则资源为 17 个（比 Docker 少 `game_download`、`epic_platform`、`win_update`、`steam` 与 3 个 CDN IP provider）。
 
 关于**节点名过滤**：公开模板不做任何订阅假设、不设过滤；是否过滤、过滤什么词，取决于具体订阅的质量，属个人配置范畴，见设计文档。个人配置里第一份订阅不做订阅级过滤，第二份订阅用 7 个词（`香港|HK|HongKong|Hong Kong|过滤|剩余|套餐`）剔除假节点/香港节点；iOS 因正则兼容性把这条订阅级过滤写成负向先行断言。
 
@@ -294,7 +297,7 @@ iOS 的规则资源为 16 个（比 Docker 少 `game_download`、`epic_platform`
 
 本配置只列**直接来源**——所有规则资源都从这一个仓库取用，没有第二个直连来源：
 
-*   **[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)**：本仓库规则资源的唯一直接来源。所有运行时订阅直接指向 `meta` 发布分支，每 86400 秒刷新，**不固定 commit、不锁日期快照、不使用不可更新的 tag**。Desktop/Docker 使用 23 个 provider，Android 使用 19 个，iOS 使用 16 个（Desktop/Docker 的 23 个含 `steam`）。
+*   **[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)**：本仓库规则资源的唯一直接来源。所有运行时订阅直接指向 `meta` 发布分支，每 86400 秒刷新，**不固定 commit、不锁日期快照、不使用不可更新的 tag**。Desktop/Docker 使用 24 个 provider，Android 使用 20 个，iOS 使用 17 个（Desktop/Docker 的 24 个含 `steam` 与 `spotify`）。
 
 8 份公开模板与 4 份个人配置都由这套规则资源驱动；公开仓只放模板，4 份个人配置与发布脚本 `python3 private/tools/subscription/publish.py` 位于私有仓 `mihomo-private`。
 
@@ -314,7 +317,7 @@ iOS 的规则资源为 16 个（比 Docker 少 `game_download`、`epic_platform`
 
     *   **【核心底线：文件角色绝对隔离】**：
 
-        *   **公共模板（`*_template.yaml`）是发到 GitHub 给其他人使用的**：必须保持绝对的中立、通用与纯净。**绝对严禁**将用户的真实订阅链接、私有网络 IP、特定商业软件的定制规则，或任何私有节点标识与过滤词写入模板文件。
+        *   **公共模板（`*_template.yaml`）是发到 GitHub 给其他人使用的**：判定标准只有一条——换一个人、换一份订阅、换一台机器，这条内容是否仍然成立。**允许**从唯一来源整组引用的通用服务级资源（如 `google`、`ai_chat`、`steam`、`spotify`），它们来源可追溯、沿用上游维护、任何人拉下来行为一致；**禁止**只有你自己的环境才成立的内容：真实订阅链接、私有网络 IP 与内网主机名、私有节点标识与订阅级过滤词、按个人偏好命名的策略组，以及为绕开某个具体故障而手写的单条域名/IP/进程例外。
         *   **个人配置（`private/configs/mihomo_config_*.yaml`，无 `_template` 后缀）是用户本地自用的**：模板内容复制后另存到私有仓 `mihomo-private` 的 `private/configs/`，不要再写回公开仓。所有私有订阅与深度定制规则只能写入此类自用文件。
 
     *   读取对应的 `*_single_template.yaml` 或 `*_dual_template.yaml` 文件。

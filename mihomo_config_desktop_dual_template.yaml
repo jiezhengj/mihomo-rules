@@ -226,6 +226,16 @@ rule-providers:
     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gfw.mrs"
     path: ./rule_providers/gfw.mrs
     interval: 86400
+  # Spotify：账号与校验链路（*.spotify.com）由 gfw 的 +.spotify.com 接走并保持代理；
+  # 余下成员是音频、封面与实验 CDN（+.scdn.co / +.spotifycdn.com / +.spotifycdn.net / +.pscdn.co 等），
+  # 大陆可直连。上游没有「仅 CDN」的子集，只能整组引用，再靠规则顺序把账号侧交回 gfw。
+  spotify:
+    type: http
+    behavior: domain
+    format: mrs
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs"
+    path: ./rule_providers/spotify.mrs
+    interval: 86400
   # —— 游戏分发下载（移动端不做桌面游戏平台下载，不引入）——
   game_download:
     type: http
@@ -312,6 +322,11 @@ rules:
 
   # 4) 需翻墙主体 -> AUTO
   - RULE-SET,gfw,AUTO
+  #    Spotify 播放链路 -> DIRECT，必须在 gfw 之后：
+  #    gfw 的 +.spotify.com 先接走账号与校验端点（免费版每 14 天的登录地校验必须走代理），
+  #    这里只接 gfw 漏下的音频/封面 CDN 主机，让这类流量不再经机场。
+  #    代价：同集合剩 12 条营销与短链域名也变为直连；3 条广告成员已被第 1 条 REJECT 拦下。
+  - RULE-SET,spotify,DIRECT
   #    google 必须在 cn 之前：确保 GMS (services.googleapis.cn) 走代理以获取海外正常 CDN 分发，避免调度至国内电信内网缓存节点引发下载挂起。
   - RULE-SET,google,AUTO
 
